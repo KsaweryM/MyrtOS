@@ -68,11 +68,6 @@ void timer1(void* atr)
   while(1)
   {
     counter1++;
-
-    if (counter1 == 1000)
-    {
-      break;
-    }
   }
 }
 

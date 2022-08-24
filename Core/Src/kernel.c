@@ -1,21 +1,20 @@
 #include "kernel.h"
+#include "scheduler.h"
 #include "atomic.h"
 #include "list.h"
 
-list* threads = 0;
-volatile thread_control_block* current_thread = 0;
-iterator* threads_iterator = 0;
-uint32_t* main_thread_SP_register = 0;
+#define INTCTRL (*((volatile uint32_t *)0xE000ED04))
+#define PENDSTET  (1U<<26)
 
-uint32_t* choose_next_thread(uint32_t* SP);
-static void remove_thread_from_kernel_list(void);
 static void system_timer_initialize(uint32_t CPU_frequency);
 static void delay_timer_initialize(uint32_t CPU_frequency);
 static uint32_t get_CPU_frequency();
 
+scheduler* scheduler_object_pointer = 0;
+
 void kernel_create(void)
 {
-  threads = list_create();
+  scheduler_object_pointer = scheduler_create(0);
 }
 
 void kernel_destroy(void)
@@ -30,7 +29,6 @@ void kernel_launch(void)
   system_timer_initialize(CPU_frequency);
   delay_timer_initialize(CPU_frequency);
 
-  threads_iterator = iterator_create(threads);
   thread_yield();
 }
 
@@ -46,57 +44,54 @@ void kernel_resume(void)
 
 void kernel_add_thread(const thread_attributes* thread_attributes_object)
 {
-  thread_control_block* thread_control_block_object = thread_control_block_create(thread_attributes_object, remove_thread_from_kernel_list);
-  list_push_back(threads, thread_control_block_object);
+  scheduler_add_thread(scheduler_object_pointer, thread_attributes_object);
 }
 
 void thread_delay(uint32_t seconds)
 {
 }
 
-#define INTCTRL (*((volatile uint32_t *)0xE000ED04))
-#define PENDSTET  (1U<<26)
-
 void thread_yield(void)
 {
   __disable_irq();
-  /*Clear SysTick Current value register*/
   SysTick->VAL = 0;
 
-  /*Trigger SysTick*/
   INTCTRL = PENDSTET;
   __enable_irq();
 }
 
+uint32_t kernel_is_context_to_save()
+{
+  return scheduler_is_context_to_save(scheduler_object_pointer);
+}
+
+uint32_t kernel_choose_next_thread(uint32_t SP_register)
+{
+  return scheduler_choose_next_thread(scheduler_object_pointer, SP_register);
+}
+
+
 __attribute__((naked)) void SysTick_Handler(void)
 {
-  // disable interrupts
   __asm("CPSID  I");
-
-  //TODO: if current_thread != 0, save context
-  __asm("LDR R0, =main_thread_SP_register");
-
-  __asm("LDR R0, [R0]");
-
-  __asm("CMP R0, #0");
-
-  __asm("BEQ save");
-
-  __asm("LDR R0, =current_thread");
-
-  __asm("LDR R0, [R0]");
-
-  __asm("CMP R0, #0");
-
-  __asm("BEQ skip");
-
-  __asm("save: PUSH {R4-R11}");
-
-  __asm("skip: MOV R0, SP");
 
   __asm("PUSH {LR}");
 
-  __asm("BL choose_next_thread");
+  __asm("BL kernel_is_context_to_save");
+
+  __asm("POP {LR}");
+
+  __asm("CMP R0, #0");
+
+  __asm("BEQ save_contex_end");
+
+  __asm("save_contex_begin: PUSH {R4-R11}");
+
+  __asm("save_contex_end: MOV R0, SP");
+
+  __asm("PUSH {LR}");
+
+  __asm("BL kernel_choose_next_thread");
 
   __asm("POP {LR}");
 
@@ -107,44 +102,6 @@ __attribute__((naked)) void SysTick_Handler(void)
   __asm("CPSIE I");
 
   __asm("BX LR");
-}
-
-uint32_t* choose_next_thread(uint32_t* SP)
-{
-  if (main_thread_SP_register == 0)
-  {
-    main_thread_SP_register = SP;
-  }
-  else if (current_thread != 0)
-  {
-    current_thread->stack_pointer = SP;
-
-    cyclic_iterator_next(threads_iterator);
-  }
-
-  current_thread = (thread_control_block*)iteator_get_data(threads_iterator);
-
-  uint32_t* next_thread_stack_pointer = (current_thread == 0) ? main_thread_SP_register : current_thread->stack_pointer;
-
-
-  return next_thread_stack_pointer;
-}
-
-static void remove_thread_from_kernel_list(void)
-{
-  __disable_irq();
-
-  //current_thread = iterator_pop(threads_iterator);
-  iterator_pop(threads_iterator);
-  //thread_control_block_destroy(current_thread);
-  current_thread = 0;
-
-  __enable_irq();
-
-  thread_yield();
-
-  // wait forever
-  while(1);
 }
 
 static void system_timer_initialize(uint32_t CPU_frequency)
