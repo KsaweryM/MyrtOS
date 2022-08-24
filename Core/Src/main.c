@@ -127,7 +127,7 @@ int main(void)
   };
 
   scheduler_attributes scheduler_attributes_object = {
-
+    .algorithm = round_robin_scheduling
   };
 
   kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);

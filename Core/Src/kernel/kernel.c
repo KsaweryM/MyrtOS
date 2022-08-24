@@ -1,7 +1,7 @@
 #include <kernel/atomic.h>
 #include <kernel/kernel.h>
 #include <kernel/list.h>
-#include <kernel/scheduler.h>
+#include <kernel/scheduler/scheduler.h>
 
 #define INTCTRL (*((volatile uint32_t *)0xE000ED04))
 #define PENDSTET  (1U<<26)
