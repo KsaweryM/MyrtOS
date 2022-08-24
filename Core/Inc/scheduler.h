@@ -8,6 +8,7 @@ typedef struct scheduler scheduler;
 
 typedef struct scheduler_attributes
 {
+
 } scheduler_attributes;
 
 scheduler* scheduler_create(const scheduler_attributes* scheduler_attributes_object);

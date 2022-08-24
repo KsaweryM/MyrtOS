@@ -122,12 +122,20 @@ int main(void)
     .thread_priority = 10
   };
 
-  kernel_create();
+  kernel_attributes kernel_attributes_object = {
 
-  kernel_add_thread(&timer1_attributes);
-  kernel_add_thread(&timer2_attributes);
+  };
 
-  kernel_launch();
+  scheduler_attributes scheduler_attributes_object = {
+
+  };
+
+  kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
+
+  kernel_add_thread(kernel_object, &timer1_attributes);
+  kernel_add_thread(kernel_object, &timer2_attributes);
+
+  kernel_launch(kernel_object);
 
   /* USER CODE END 2 */
 

@@ -10,19 +10,43 @@ static void system_timer_initialize(uint32_t CPU_frequency);
 static void delay_timer_initialize(uint32_t CPU_frequency);
 static uint32_t get_CPU_frequency();
 
-scheduler* scheduler_object_pointer = 0;
-
-void kernel_create(void)
+struct kernel
 {
-  scheduler_object_pointer = scheduler_create(0);
+  scheduler* scheduler_object;
+};
+
+kernel* kernel_global_object = 0;
+
+kernel* kernel_create(const kernel_attributes* kernel_attributes_object, const scheduler_attributes* scheduler_attributes_object)
+{
+  CRITICAL_PATH_ENTER();
+
+  if (kernel_global_object == 0)
+  {
+    kernel_global_object = malloc(sizeof(*kernel_global_object));
+
+    kernel_global_object->scheduler_object = scheduler_create(scheduler_attributes_object);
+  }
+
+  CRITICAL_PATH_EXIT();
+
+  return kernel_global_object;
 }
 
-void kernel_destroy(void)
-{
 
+//TODO: go back to main thread and disable SysTick Interrupt
+void kernel_destroy(kernel* kernel_object)
+{
+  CRITICAL_PATH_ENTER();
+
+  scheduler_destroy(kernel_object->scheduler_object);
+
+  free(kernel_object);
+
+  CRITICAL_PATH_EXIT();
 }
 
-void kernel_launch(void)
+void kernel_launch(const kernel* kernel_object)
 {
   uint32_t CPU_frequency = get_CPU_frequency();
 
@@ -32,19 +56,23 @@ void kernel_launch(void)
   thread_yield();
 }
 
-void kernel_suspend(void)
+void kernel_suspend(const kernel* kernel_object)
 {
-
+  CRITICAL_PATH_ENTER();
 }
 
-void kernel_resume(void)
+void kernel_resume(const kernel* kernel_object)
 {
-
+  CRITICAL_PATH_EXIT();
 }
 
-void kernel_add_thread(const thread_attributes* thread_attributes_object)
+void kernel_add_thread(kernel* kernel_object, const thread_attributes* thread_attributes_object)
 {
-  scheduler_add_thread(scheduler_object_pointer, thread_attributes_object);
+  CRITICAL_PATH_ENTER();
+
+  scheduler_add_thread(kernel_object->scheduler_object, thread_attributes_object);
+
+  CRITICAL_PATH_EXIT();
 }
 
 void thread_delay(uint32_t seconds)
@@ -62,12 +90,12 @@ void thread_yield(void)
 
 uint32_t kernel_is_context_to_save()
 {
-  return scheduler_is_context_to_save(scheduler_object_pointer);
+  return scheduler_is_context_to_save(kernel_global_object->scheduler_object);
 }
 
 uint32_t kernel_choose_next_thread(uint32_t SP_register)
 {
-  return scheduler_choose_next_thread(scheduler_object_pointer, SP_register);
+  return scheduler_choose_next_thread(kernel_global_object->scheduler_object, SP_register);
 }
 
 

@@ -3,16 +3,24 @@
 
 #include "stm32l4xx.h"
 #include "thread.h"
+#include "scheduler.h"
 #include <stdint.h>
 
-void kernel_create(void);
-void kernel_destroy(void);
+typedef struct kernel kernel;
 
-void kernel_launch(void);
-void kernel_suspend(void);
-void kernel_resume(void);
+typedef struct kernel_attributes
+{
 
-void kernel_add_thread(const thread_attributes* thread_attributes_object);
+} kernel_attributes;
+
+kernel* kernel_create(const kernel_attributes* kernel_attributes_object, const scheduler_attributes* scheduler_attributes_object);
+void kernel_destroy(kernel* kernel_object);
+
+void kernel_launch(const kernel* kernel_object);
+void kernel_suspend(const kernel* kernel_object);
+void kernel_resume(const kernel* kernel_object);
+
+void kernel_add_thread(kernel* kernel_object, const thread_attributes* thread_attributes_object);
 
 void thread_delay(uint32_t seconds);
 void thread_yield(void);
