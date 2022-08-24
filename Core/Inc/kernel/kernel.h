@@ -1,9 +1,9 @@
 #ifndef __KERNEL_H
 #define __KERNEL_H
 
+#include <kernel/scheduler.h>
+#include <kernel/thread.h>
 #include "stm32l4xx.h"
-#include "thread.h"
-#include "scheduler.h"
 #include <stdint.h>
 
 typedef struct kernel kernel;

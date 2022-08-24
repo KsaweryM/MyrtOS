@@ -1,6 +1,6 @@
-#include "scheduler.h"
-#include "list.h"
-#include "atomic.h"
+#include <kernel/atomic.h>
+#include <kernel/list.h>
+#include <kernel/scheduler.h>
 
 struct scheduler
 {

@@ -1,4 +1,4 @@
-#include "thread.h"
+#include <kernel/thread.h>
 #include <string.h>
 #include <stdlib.h>
 

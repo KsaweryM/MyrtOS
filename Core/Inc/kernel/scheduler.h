@@ -1,8 +1,8 @@
 #ifndef __SCHEDULER_H
 #define __SCHEDULER_H
 
+#include <kernel/thread.h>
 #include <stdint.h>
-#include "thread.h"
 
 typedef struct scheduler scheduler;
 
