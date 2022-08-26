@@ -22,4 +22,7 @@ void thread_control_block_set_priority(thread_control_block* thread_control_bloc
 uint32_t* thread_control_block_get_stack_pointer(const thread_control_block* thread_control_block_object);
 void thread_control_block_set_stack_pointer(thread_control_block* thread_control_block_object, uint32_t* stack_pointer);
 
+uint32_t* thread_control_block_get_delay(const thread_control_block* thread_control_block_object);
+void thread_control_block_set_delay(thread_control_block* thread_control_block_object, uint32_t delay);
+
 #endif

@@ -11,6 +11,7 @@ typedef struct scheduler_round_robin_data
 } scheduler_round_robin_data;
 
 void scheduler_round_robin_remove_thread_from_ready_list(void);
+void scheduler_round_robin_block_thread(uint32_t seconds);
 
 scheduler* scheduler_round_robin_create(const scheduler_attributes* scheduler_attributes_object)
 {
@@ -67,6 +68,7 @@ uint32_t scheduler_round_robin_choose_next_thread(scheduler* scheduler_object, u
   if (next_thread_stack_pointer == 0)
   {
     next_thread_stack_pointer = scheduler_data->main_thread_SP_register;
+    scheduler_data->main_thread_SP_register = 0;
   }
 
   return (uint32_t) next_thread_stack_pointer;
@@ -82,4 +84,9 @@ void scheduler_round_robin_remove_thread_from_ready_list(void)
 {
 
   while(1);
+}
+
+void scheduler_round_robin_block_thread(uint32_t seconds)
+{
+
 }
