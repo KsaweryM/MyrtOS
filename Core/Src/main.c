@@ -75,6 +75,11 @@ void timer0(void* atr)
   while(1)
   {
     counter0++;
+
+    if (counter0 == 1000)
+    {
+    	break;
+    }
   }
 }
 
@@ -84,6 +89,11 @@ void timer1(void* atr)
   while(1)
   {
     counter1++;
+
+    if (counter1 == 1000)
+    {
+    	break;
+    }
   }
 }
 
@@ -93,6 +103,11 @@ void timer2(void* atr)
   while(1)
   {
     counter2++;
+
+    if (counter2 == 1000)
+    {
+    	break;
+    }
   }
 }
 
@@ -102,6 +117,11 @@ void timer3(void* atr)
   while(1)
   {
     counter3++;
+
+    if (counter3 == 1000)
+    {
+    	break;
+    }
   }
 }
 
@@ -138,7 +158,7 @@ int main(void)
     .function = timer0,
     .function_arguments = (void*)&value0_deviler,
     .stack_size = 1000,
-    .thread_priority = 9
+    .thread_priority = 11
   };
 
   thread_attributes timer1_attributes = {
@@ -159,7 +179,7 @@ int main(void)
     .function = timer3,
     .function_arguments = (void*)&value3_deviler,
     .stack_size = 1000,
-    .thread_priority = 13
+    .thread_priority = 9
   };
 
   kernel_attributes kernel_attributes_object = {
@@ -167,7 +187,7 @@ int main(void)
   };
 
   scheduler_attributes scheduler_attributes_object = {
-    .algorithm = prioritized_preemptive_scheduling_with_time_slicing
+    .algorithm = round_robin_scheduling
   };
 
   kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);

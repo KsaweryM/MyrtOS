@@ -1,39 +1,60 @@
 #include "kernel/scheduler/scheduler_round_robin.h"
 #include "kernel/list.h"
+#include "kernel/atomic.h"
 #include <stdlib.h>
+
+scheduler* scheduler_round_robin_global_object = 0;
 
 typedef struct scheduler_round_robin_data
 {
   list* threads;
+	list* threads_to_remove;
   iterator* threads_iterator;
   uint32_t* main_thread_SP_register;
   uint32_t is_contex_to_save;
+	thread_control_block* idle_task;
 } scheduler_round_robin_data;
 
 void scheduler_round_robin_remove_thread_from_ready_list(void);
 void scheduler_round_robin_block_thread(uint32_t seconds);
+void scheduler_round_robin_idle_task(void* args);
+void scheduler_round_robin_create_idle_task(scheduler* scheduler_object);
 
 scheduler* scheduler_round_robin_create(const scheduler_attributes* scheduler_attributes_object)
 {
-	scheduler* scheduler_object = malloc(sizeof(*scheduler_object));
+	CRITICAL_PATH_ENTER();
 
-	scheduler_object->scheduler_methods = malloc(sizeof(*scheduler_object->scheduler_methods));
+	if (scheduler_round_robin_global_object == 0)
+	{
+		scheduler* scheduler_object = malloc(sizeof(*scheduler_object));
 
-	scheduler_object->scheduler_methods->scheduler_destroy = scheduler_round_robin_destroy;
-	scheduler_object->scheduler_methods->scheduler_is_context_to_save = scheduler_round_robin_is_context_to_save;
-	scheduler_object->scheduler_methods->scheduler_choose_next_thread = scheduler_round_robin_choose_next_thread;
-	scheduler_object->scheduler_methods->scheduler_add_thread = scheduler_round_robin_add_thread;
+		scheduler_object = malloc(sizeof(*scheduler_object));
 
-	scheduler_round_robin_data* scheduler_data = malloc(sizeof(*scheduler_data));
+		scheduler_object->scheduler_methods = malloc(sizeof(*scheduler_object->scheduler_methods));
 
-	scheduler_data->threads = list_create();
-	scheduler_data->threads_iterator = iterator_create(scheduler_data->threads);
-	scheduler_data->main_thread_SP_register = 0;
-	scheduler_data->is_contex_to_save = 1;
+		scheduler_object->scheduler_methods->scheduler_destroy = scheduler_round_robin_destroy;
+		scheduler_object->scheduler_methods->scheduler_is_context_to_save = scheduler_round_robin_is_context_to_save;
+		scheduler_object->scheduler_methods->scheduler_choose_next_thread = scheduler_round_robin_choose_next_thread;
+		scheduler_object->scheduler_methods->scheduler_add_thread = scheduler_round_robin_add_thread;
 
-	scheduler_object->scheduler_data = scheduler_data;
+		scheduler_round_robin_data* scheduler_data = malloc(sizeof(*scheduler_data));
 
-	return scheduler_object;
+		scheduler_data->threads = list_create();
+		scheduler_data->threads_to_remove = list_create();
+		scheduler_data->threads_iterator = iterator_create(scheduler_data->threads);
+		scheduler_data->main_thread_SP_register = 0;
+		scheduler_data->is_contex_to_save = 1;
+
+		scheduler_object->scheduler_data = scheduler_data;
+
+		scheduler_round_robin_create_idle_task(scheduler_object);
+
+		scheduler_round_robin_global_object = scheduler_object;
+	}
+
+	CRITICAL_PATH_EXIT();
+
+	return scheduler_round_robin_global_object;
 }
 
 void scheduler_round_robin_destroy(scheduler* scheduler_object)
@@ -82,6 +103,15 @@ void scheduler_round_robin_add_thread(scheduler* scheduler_object, const thread_
 
 void scheduler_round_robin_remove_thread_from_ready_list(void)
 {
+	CRITICAL_PATH_ENTER();
+
+	scheduler* scheduler_object = scheduler_round_robin_global_object;
+	scheduler_round_robin_data* scheduler_data = (scheduler_round_robin_data*) scheduler_object->scheduler_data;
+
+	thread_control_block* thread_to_delete = iterator_pop(scheduler_data->threads_iterator);
+	list_push_back(scheduler_data->threads_to_remove, thread_to_delete);
+
+	CRITICAL_PATH_EXIT();
 
   while(1);
 }
@@ -89,4 +119,44 @@ void scheduler_round_robin_remove_thread_from_ready_list(void)
 void scheduler_round_robin_block_thread(uint32_t seconds)
 {
 
+}
+
+void scheduler_round_robin_idle_task(void* args)
+{
+	CRITICAL_PATH_ENTER();
+
+	scheduler* scheduler_object = (scheduler*) args;
+	scheduler_round_robin_data* scheduler_data = (scheduler_round_robin_data*) scheduler_object->scheduler_data;
+	list* threads_to_remove = scheduler_data->threads_to_remove;
+
+	iterator* iterator_object = iterator_create(threads_to_remove);
+	iterator_reset(iterator_object);
+
+	while (1)
+	{
+		thread_control_block* thread_control_block_object = (thread_control_block*) iterator_pop(iterator_object);
+
+		if (thread_control_block_object == 0)
+		{
+			break;
+		}
+
+		thread_control_block_destroy(thread_control_block_object);
+	}
+
+	CRITICAL_PATH_EXIT();
+}
+
+void scheduler_round_robin_create_idle_task(scheduler* scheduler_object)
+{
+	thread_attributes thread_attributes_object = {
+			.function = scheduler_round_robin_idle_task,
+			.function_arguments = (void*) scheduler_object,
+			.stack_size = 1000,
+			.thread_priority = 0
+	};
+
+	thread_control_block* thread_control_block_object = thread_control_block_create(&thread_attributes_object, 0);
+
+	((scheduler_round_robin_data*)scheduler_object->scheduler_data)->idle_task = thread_control_block_object;
 }

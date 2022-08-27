@@ -3,20 +3,17 @@
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/scheduler_factory.h>
 
-scheduler* scheduler_global_object = 0;
-
 scheduler* scheduler_create(const scheduler_attributes* scheduler_attributes_object)
 {
+  scheduler* scheduler_object = 0;
+
   CRITICAL_PATH_ENTER();
 
-  if (scheduler_global_object == 0)
-  {
-    scheduler_global_object = scheduler_factory_create_scheduler(scheduler_attributes_object);
-  }
+  scheduler_object = scheduler_factory_create_scheduler(scheduler_attributes_object);
 
   CRITICAL_PATH_EXIT();
 
-  return scheduler_global_object;
+  return scheduler_object;
 }
 
 void scheduler_destroy(scheduler* scheduler_object)

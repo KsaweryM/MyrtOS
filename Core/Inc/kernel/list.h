@@ -18,6 +18,7 @@ int32_t list_destroy(list* list_object);
 
 void list_push_front(list* list_object, void* data);
 void list_push_back(list* list_object, void* data);
+uint32_t list_is_empty(const list* list_object);
 
 iterator* iterator_create(list* list_object);
 void iterator_destroy(iterator* iterator_object);

@@ -87,6 +87,11 @@ void list_push_back(list* list_object, void* data)
   }
 }
 
+uint32_t list_is_empty(const list* list_object)
+{
+	return list_object->list_begin == 0;
+}
+
 iterator* iterator_create(list* list_object)
 {
   iterator* iterator_object = malloc(sizeof(*iterator_object));
