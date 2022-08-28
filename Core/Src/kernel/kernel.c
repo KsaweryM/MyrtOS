@@ -3,8 +3,11 @@
 #include <kernel/list.h>
 #include <kernel/scheduler/scheduler.h>
 
-#define INTCTRL (*((volatile uint32_t *)0xE000ED04))
-#define PENDSTET  (1U<<26)
+#define INTCTRL			(*((volatile uint32_t *)0xE000ED04))
+#define PENDSTET		(1U<<26)
+#define CLKSOURCE		(1U << 2)
+#define TICKINT			(1U << 1)
+#define ENABLE			(1U << 0)
 
 static void system_timer_initialize(uint32_t CPU_frequency);
 static void delay_timer_initialize(uint32_t CPU_frequency);
@@ -42,6 +45,12 @@ void kernel_destroy(kernel* kernel_object)
   scheduler_destroy(kernel_object->scheduler_object);
 
   free(kernel_object);
+
+  // disable sysTick
+  SysTick->CTRL &= !TICKINT;
+
+  // remove pend state
+  INTCTRL &= !PENDSTET;
 
   CRITICAL_PATH_EXIT();
 }
@@ -180,10 +189,6 @@ static void system_timer_initialize(uint32_t CPU_frequency)
   // TOOD: get these attributes from user
   register const uint32_t context_switch_period_in_milliseconds = 100;
   register const uint32_t kernel_priority = 15;
-
-  register const uint32_t CLKSOURCE = (1U << 2);
-  register const uint32_t TICKINT   = (1U << 1);
-  register const uint32_t ENABLE    = (1U << 0);
 
   // Reset SYST_CSR register
   SysTick->CTRL = 0;

@@ -7,16 +7,16 @@ struct thread_control_block
   uint32_t* stack_pointer;
   uint8_t thread_priority;
   uint32_t delay;
-  uint32_t allocated_memory_for_stack[];
+  uint32_t* allocated_memory_for_stack;
 };
 
 thread_control_block* thread_control_block_create(const thread_attributes* thread_attributes_object, void (*remove_thread_from_kernel_list)(void))
 {
   register const uint32_t stack_size = thread_attributes_object->stack_size;
-  thread_control_block* thread_control_block_object = malloc(sizeof(*thread_control_block_object) + stack_size);
+  thread_control_block* thread_control_block_object = malloc(sizeof(*thread_control_block_object));
   thread_control_block_object->thread_priority = thread_attributes_object->thread_priority;
   thread_control_block_object->delay = 0;
-
+  thread_control_block_object->allocated_memory_for_stack = malloc(sizeof(*thread_control_block_object->allocated_memory_for_stack) * stack_size);
   memset(thread_control_block_object->allocated_memory_for_stack, 0, stack_size);
 
   // Register PSR
@@ -61,6 +61,7 @@ thread_control_block* thread_control_block_create(const thread_attributes* threa
 
 void thread_control_block_destroy(thread_control_block* thread_control_block_object)
 {
+	free(thread_control_block_object->allocated_memory_for_stack);
   free(thread_control_block_object);
 }
 
@@ -77,7 +78,7 @@ void thread_control_block_set_stack_pointer(thread_control_block* thread_control
   }
 }
 
-uint32_t* thread_control_block_get_delay(const thread_control_block* thread_control_block_object)
+uint32_t thread_control_block_get_delay(const thread_control_block* thread_control_block_object)
 {
 	return thread_control_block_object->delay;
 }

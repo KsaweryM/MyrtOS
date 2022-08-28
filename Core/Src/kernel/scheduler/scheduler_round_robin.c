@@ -1,6 +1,7 @@
 #include "kernel/scheduler/scheduler_round_robin.h"
 #include "kernel/list.h"
 #include "kernel/atomic.h"
+#include "kernel/kernel.h"
 #include <stdlib.h>
 
 scheduler* scheduler_round_robin_global_object = 0;
@@ -11,7 +12,8 @@ typedef struct scheduler_round_robin_data
 	list* threads_to_remove;
   iterator* threads_iterator;
   uint32_t* main_thread_SP_register;
-  uint32_t is_contex_to_save;
+  uint32_t is_contex_to_save; // useless, because we always should save context
+  uint32_t interator_choose_next; // temporary
 	thread_control_block* idle_task;
 } scheduler_round_robin_data;
 
@@ -44,6 +46,7 @@ scheduler* scheduler_round_robin_create(const scheduler_attributes* scheduler_at
 		scheduler_data->threads_iterator = iterator_create(scheduler_data->threads);
 		scheduler_data->main_thread_SP_register = 0;
 		scheduler_data->is_contex_to_save = 1;
+		scheduler_data->interator_choose_next = 1;
 
 		scheduler_object->scheduler_data = scheduler_data;
 
@@ -59,7 +62,53 @@ scheduler* scheduler_round_robin_create(const scheduler_attributes* scheduler_at
 
 void scheduler_round_robin_destroy(scheduler* scheduler_object)
 {
+	CRITICAL_PATH_ENTER();
+	scheduler_round_robin_data* scheduler_data = (scheduler_round_robin_data*) scheduler_object->scheduler_data;
 
+	iterator* iterator_object = iterator_create(scheduler_data->threads);
+
+	while(!list_is_empty(scheduler_data->threads))
+	{
+		thread_control_block* thread_control_block_object = (thread_control_block*) iterator_pop(iterator_object);
+
+		if (thread_control_block_object == 0)
+		{
+			break;
+		}
+
+		thread_control_block_destroy(thread_control_block_object);
+	}
+
+	iterator_destroy(iterator_object);
+
+	iterator_object = iterator_create(scheduler_data->threads_to_remove);
+
+	while(!list_is_empty(scheduler_data->threads_to_remove))
+	{
+		thread_control_block* thread_control_block_object = (thread_control_block*) iterator_pop(iterator_object);
+
+		if (thread_control_block_object == 0)
+		{
+			break;
+		}
+
+		thread_control_block_destroy(thread_control_block_object);
+	}
+
+	iterator_destroy(iterator_object);
+
+
+	list_destroy(scheduler_data->threads);
+	list_destroy(scheduler_data->threads_to_remove);
+	iterator_destroy(scheduler_data->threads_iterator);
+	thread_control_block_destroy(scheduler_data->idle_task);
+
+	free(scheduler_object->scheduler_data);
+	free(scheduler_object->scheduler_methods);
+
+	free(scheduler_object);
+
+	CRITICAL_PATH_EXIT();
 }
 
 uint32_t scheduler_round_robin_is_context_to_save(const scheduler* scheduler_object)
@@ -77,19 +126,29 @@ uint32_t scheduler_round_robin_choose_next_thread(scheduler* scheduler_object, u
 
 		iterator_reset(scheduler_data->threads_iterator);
 	}
-	else if (scheduler_data->is_contex_to_save)
+	else if (scheduler_data->interator_choose_next)
   {
-    thread_control_block_set_stack_pointer((thread_control_block*)iteator_get_data(scheduler_data->threads_iterator), (uint32_t*) SP_register);
+    	thread_control_block_set_stack_pointer((thread_control_block*)iteator_get_data(scheduler_data->threads_iterator), (uint32_t*) SP_register);
 
-    cyclic_iterator_next(scheduler_data->threads_iterator);
+    	cyclic_iterator_next(scheduler_data->threads_iterator);
   }
+
+	scheduler_data->interator_choose_next = 1;
 
   uint32_t* next_thread_stack_pointer = thread_control_block_get_stack_pointer((thread_control_block*)iteator_get_data(scheduler_data->threads_iterator));
 
   if (next_thread_stack_pointer == 0)
   {
-    next_thread_stack_pointer = scheduler_data->main_thread_SP_register;
-    scheduler_data->main_thread_SP_register = 0;
+
+  	if (!list_is_empty(scheduler_data->threads_to_remove))
+  	{
+  		next_thread_stack_pointer = thread_control_block_get_stack_pointer(scheduler_data->idle_task);
+  	}
+  	else
+  	{
+      next_thread_stack_pointer = scheduler_data->main_thread_SP_register;
+      scheduler_data->main_thread_SP_register = 0;
+  	}
   }
 
   return (uint32_t) next_thread_stack_pointer;
@@ -110,8 +169,11 @@ void scheduler_round_robin_remove_thread_from_ready_list(void)
 
 	thread_control_block* thread_to_delete = iterator_pop(scheduler_data->threads_iterator);
 	list_push_back(scheduler_data->threads_to_remove, thread_to_delete);
+	scheduler_data->interator_choose_next = 0;
 
 	CRITICAL_PATH_EXIT();
+
+	thread_yield();
 
   while(1);
 }
@@ -144,6 +206,9 @@ void scheduler_round_robin_idle_task(void* args)
 		thread_control_block_destroy(thread_control_block_object);
 	}
 
+	iterator_destroy(iterator_object);
+
+	thread_yield();
 	CRITICAL_PATH_EXIT();
 }
 

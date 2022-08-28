@@ -187,7 +187,7 @@ int main(void)
   };
 
   scheduler_attributes scheduler_attributes_object = {
-    .algorithm = round_robin_scheduling
+    .algorithm = prioritized_preemptive_scheduling_with_time_slicing
   };
 
   kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
@@ -198,6 +198,8 @@ int main(void)
   kernel_add_thread(kernel_object, &timer3_attributes);
 
   kernel_launch(kernel_object);
+
+  // kernel_destroy(kernel_object);
 
   /* USER CODE END 2 */
 
