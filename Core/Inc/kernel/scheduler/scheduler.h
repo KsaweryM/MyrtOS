@@ -21,17 +21,17 @@ struct scheduler_methods
   uint32_t (*scheduler_choose_next_thread) (scheduler* scheduler_object, uint32_t SP_register);
 };
 
-typedef enum scheduler_algorithm
+typedef enum SCHEDULER_ALGORITHM
 {
-	round_robin_scheduling,
-	prioritized_preemptive_scheduling_with_time_slicing,
-	prioritized_preemptive_scheduling_without_time_slicing,
-	cooperative_scheduling
-} scheduler_algorithm;
+	ROUND_ROBIN_SCHEDULING,
+	PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING,
+	PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING,
+	COOPERATIVE_SCHEDULING
+} SCHEDULER_ALGORITHM;
 
 typedef struct scheduler_attributes
 {
-  scheduler_algorithm algorithm;
+	SCHEDULER_ALGORITHM algorithm;
 } scheduler_attributes;
 
 scheduler* scheduler_create(const scheduler_attributes* scheduler_attributes_object);

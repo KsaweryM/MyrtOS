@@ -139,7 +139,6 @@ uint32_t scheduler_round_robin_choose_next_thread(scheduler* scheduler_object, u
 
   if (next_thread_stack_pointer == 0)
   {
-
   	if (!list_is_empty(scheduler_data->threads_to_remove))
   	{
   		next_thread_stack_pointer = thread_control_block_get_stack_pointer(scheduler_data->idle_task);

@@ -17,12 +17,11 @@
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
-#include <kernel/kernel.h>
-#include <kernel/thread.h>
 #include "main.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "tests.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,16 +41,6 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-uint32_t counter0 = 0;
-uint32_t counter1 = 0;
-uint32_t counter2 = 0;
-uint32_t counter3 = 0;
-uint32_t counter_main = 0;
-
-uint32_t value0_container = 0;
-uint32_t value1_container = 0;
-uint32_t value2_container = 0;
-uint32_t value3_container = 0;
 
 /* USER CODE END PV */
 
@@ -63,67 +52,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
-uint32_t value0_deviler = 0;
-uint32_t value1_deviler = 1;
-uint32_t value2_deviler = 2;
-uint32_t value3_deviler = 3;
-
-void timer0(void* atr)
-{
-  value0_container = *(uint32_t*)atr;
-  while(1)
-  {
-    counter0++;
-
-    if (counter0 == 1000)
-    {
-    	break;
-    }
-  }
-}
-
-void timer1(void* atr)
-{
-  value1_container = *(uint32_t*)atr;
-  while(1)
-  {
-    counter1++;
-
-    if (counter1 == 1000)
-    {
-    	break;
-    }
-  }
-}
-
-void timer2(void* atr)
-{
-  value2_container = *(uint32_t*)atr;
-  while(1)
-  {
-    counter2++;
-
-    if (counter2 == 1000)
-    {
-    	break;
-    }
-  }
-}
-
-void timer3(void* atr)
-{
-  value3_container = *(uint32_t*)atr;
-  while(1)
-  {
-    counter3++;
-
-    if (counter3 == 1000)
-    {
-    	break;
-    }
-  }
-}
 
 /* USER CODE END 0 */
 
@@ -154,52 +82,8 @@ int main(void)
 
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
-  thread_attributes timer0_attributes = {
-    .function = timer0,
-    .function_arguments = (void*)&value0_deviler,
-    .stack_size = 1000,
-    .thread_priority = 11
-  };
 
-  thread_attributes timer1_attributes = {
-    .function = timer1,
-    .function_arguments = (void*)&value1_deviler,
-    .stack_size = 1000,
-    .thread_priority = 10
-  };
-
-  thread_attributes timer2_attributes = {
-    .function = timer2,
-    .function_arguments = (void*)&value2_deviler,
-    .stack_size = 1000,
-    .thread_priority = 10
-  };
-
-  thread_attributes timer3_attributes = {
-    .function = timer3,
-    .function_arguments = (void*)&value3_deviler,
-    .stack_size = 1000,
-    .thread_priority = 9
-  };
-
-  kernel_attributes kernel_attributes_object = {
-
-  };
-
-  scheduler_attributes scheduler_attributes_object = {
-    .algorithm = prioritized_preemptive_scheduling_with_time_slicing
-  };
-
-  kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
-
-  kernel_add_thread(kernel_object, &timer0_attributes);
-  kernel_add_thread(kernel_object, &timer1_attributes);
-  kernel_add_thread(kernel_object, &timer2_attributes);
-  kernel_add_thread(kernel_object, &timer3_attributes);
-
-  kernel_launch(kernel_object);
-
-  // kernel_destroy(kernel_object);
+  test0();
 
   /* USER CODE END 2 */
 
@@ -208,7 +92,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    counter_main++;
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */

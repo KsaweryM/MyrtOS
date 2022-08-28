@@ -8,15 +8,15 @@ scheduler* scheduler_factory_create_scheduler(const scheduler_attributes* schedu
 
 	switch (scheduler_attributes_object->algorithm)
 	{
-	case round_robin_scheduling:
+	case ROUND_ROBIN_SCHEDULING:
 		scheduler_object = scheduler_round_robin_create(scheduler_attributes_object);
 		break;
-	case prioritized_preemptive_scheduling_with_time_slicing:
+	case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING:
 		scheduler_object = scheduler_priority_time_slicing_create(scheduler_attributes_object);
 		break;
-	case prioritized_preemptive_scheduling_without_time_slicing:
+	case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING:
 		break;
-	case cooperative_scheduling:
+	case COOPERATIVE_SCHEDULING:
 		break;
 	}
 

@@ -65,6 +65,17 @@ void thread_control_block_destroy(thread_control_block* thread_control_block_obj
   free(thread_control_block_object);
 }
 
+uint32_t thread_control_block_get_priority(const thread_control_block* thread_control_block_object)
+{
+	return thread_control_block_object->thread_priority;
+}
+
+void thread_control_block_set_priority(thread_control_block* thread_control_block_object, uint32_t priority)
+{
+	thread_control_block_object->thread_priority = priority;
+}
+
+
 uint32_t* thread_control_block_get_stack_pointer(const thread_control_block* thread_control_block_object)
 {
   return thread_control_block_object != 0 ? thread_control_block_object->stack_pointer : 0;
@@ -77,6 +88,7 @@ void thread_control_block_set_stack_pointer(thread_control_block* thread_control
     thread_control_block_object->stack_pointer = stack_pointer;
   }
 }
+
 
 uint32_t thread_control_block_get_delay(const thread_control_block* thread_control_block_object)
 {
