@@ -46,6 +46,8 @@ void kernel_destroy(kernel* kernel_object)
 
   free(kernel_object);
 
+  kernel_global_object = 0;
+
   // disable sysTick
   SysTick->CTRL &= !TICKINT;
 

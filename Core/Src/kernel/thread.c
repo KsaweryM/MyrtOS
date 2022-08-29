@@ -61,8 +61,11 @@ thread_control_block* thread_control_block_create(const thread_attributes* threa
 
 void thread_control_block_destroy(thread_control_block* thread_control_block_object)
 {
-	free(thread_control_block_object->allocated_memory_for_stack);
-  free(thread_control_block_object);
+	if (thread_control_block_object != 0)
+	{
+		free(thread_control_block_object->allocated_memory_for_stack);
+		free(thread_control_block_object);
+	}
 }
 
 uint32_t thread_control_block_get_priority(const thread_control_block* thread_control_block_object)

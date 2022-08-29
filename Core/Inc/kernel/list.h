@@ -23,7 +23,7 @@ uint32_t list_is_empty(const list* list_object);
 iterator* iterator_create(list* list_object);
 void iterator_destroy(iterator* iterator_object);
 
-void* iteator_get_data(const iterator* iterator_object);
+void* iterator_get_data(const iterator* iterator_object);
 void* iterator_pop(iterator* iterator_object);
 void iterator_reset(iterator* iterator_object);
 

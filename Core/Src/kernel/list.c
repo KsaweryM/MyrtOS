@@ -107,7 +107,7 @@ void iterator_destroy(iterator* iterator_object)
   free(iterator_object);
 }
 
-void* iteator_get_data(const iterator* iterator_object)
+void* iterator_get_data(const iterator* iterator_object)
 {
   if (iterator_object->current_list_item == 0)
   {

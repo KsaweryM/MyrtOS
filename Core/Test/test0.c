@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define TEST0_REPETITIONS 100
+#define TEST0_REPETITIONS 400
 #define TIMER0_END 1000
 #define TIMER1_END 1400
 #define TIMER2_END 1200
@@ -161,9 +161,8 @@ uint32_t test0()
 		};
 
 		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = ROUND_ROBIN_SCHEDULING
+			.algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING
 		};
-
 
 		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
 
