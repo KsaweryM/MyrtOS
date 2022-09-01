@@ -184,6 +184,18 @@ uint32_t iterator_previous(iterator* iterator_object)
   return iterator_object->current_list_item == 0;
 }
 
+void* cyclic_iterator_pop(iterator* iterator_object)
+{
+	void* data = iterator_pop(iterator_object);
+
+	if (iterator_object->current_list_item == 0)
+	{
+		 iterator_object->current_list_item = iterator_object->iterator_owner->list_begin;
+	}
+
+	return data;
+}
+
 uint32_t cyclic_iterator_next(iterator* iterator_object)
 {
   if (iterator_object->current_list_item == 0 || iterator_object->current_list_item->next == 0)

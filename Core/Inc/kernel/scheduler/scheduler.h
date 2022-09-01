@@ -2,6 +2,7 @@
 #define __SCHEDULER_H
 
 #include <kernel/thread.h>
+#include <kernel/mutex.h>
 #include <stdint.h>
 
 typedef struct scheduler scheduler;
@@ -19,6 +20,7 @@ struct scheduler_methods
   uint32_t (*scheduler_is_context_to_save) (const scheduler* scheduler_object);
   void (*scheduler_add_thread) (scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
   uint32_t (*scheduler_choose_next_thread) (scheduler* scheduler_object, uint32_t SP_register);
+  mutex* (*scheduler_create_mutex) (scheduler* scheduler_object);
 };
 
 typedef enum SCHEDULER_ALGORITHM
@@ -40,5 +42,6 @@ void scheduler_destroy(scheduler* scheduler_object);
 uint32_t scheduler_is_context_to_save(const scheduler* scheduler_object);
 uint32_t scheduler_choose_next_thread(scheduler* scheduler_object, uint32_t SP_register);
 void scheduler_add_thread(scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
+mutex* scheduler_create_mutex(scheduler* scheduler_object);
 
 #endif

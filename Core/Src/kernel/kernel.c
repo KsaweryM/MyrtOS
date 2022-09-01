@@ -2,6 +2,7 @@
 #include <kernel/kernel.h>
 #include <kernel/list.h>
 #include <kernel/scheduler/scheduler.h>
+#include <assert.h>
 
 #define INTCTRL			(*((volatile uint32_t *)0xE000ED04))
 #define PENDSTET		(1U<<26)
@@ -36,6 +37,16 @@ kernel* kernel_create(const kernel_attributes* kernel_attributes_object, const s
   return kernel_global_object;
 }
 
+kernel* kernel_get_instance(void)
+{
+  CRITICAL_PATH_ENTER();
+
+	assert(kernel_global_object);
+
+  CRITICAL_PATH_EXIT();
+
+  return kernel_global_object;
+}
 
 //TODO: go back to main thread and disable SysTick Interrupt
 void kernel_destroy(kernel* kernel_object)
@@ -86,6 +97,19 @@ void kernel_add_thread(kernel* kernel_object, const thread_attributes* thread_at
   CRITICAL_PATH_EXIT();
 }
 
+mutex* kernel_create_mutex(kernel* kernel_object)
+{
+  CRITICAL_PATH_ENTER();
+
+  assert(kernel_object);
+
+  mutex* mutex_object = scheduler_create_mutex(kernel_object->scheduler_object);
+
+  CRITICAL_PATH_EXIT();
+
+  return mutex_object;
+}
+
 void thread_delay(uint32_t seconds)
 {
 }
@@ -97,6 +121,8 @@ void thread_yield(void)
 
   INTCTRL = PENDSTET;
   __enable_irq();
+
+  while (INTCTRL & PENDSTET);
 }
 
 uint32_t kernel_is_context_to_save()

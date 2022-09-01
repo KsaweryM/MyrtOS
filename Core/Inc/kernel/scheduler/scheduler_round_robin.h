@@ -9,5 +9,6 @@ void scheduler_round_robin_destroy(scheduler* scheduler_object);
 uint32_t scheduler_round_robin_is_context_to_save(const scheduler* scheduler_object);
 uint32_t scheduler_round_robin_choose_next_thread(scheduler* scheduler_object, uint32_t SP_register);
 void scheduler_round_robin_add_thread(scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
+mutex* scheduler_round_robin_create_mutex(scheduler* scheduler_object);
 
 #endif

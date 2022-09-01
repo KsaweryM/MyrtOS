@@ -35,3 +35,8 @@ uint32_t scheduler_choose_next_thread(scheduler* scheduler_object, uint32_t SP_r
 {
 	return scheduler_object->scheduler_methods->scheduler_choose_next_thread(scheduler_object, SP_register);
 }
+
+mutex* scheduler_create_mutex(scheduler* scheduler_object)
+{
+	return scheduler_object->scheduler_methods->scheduler_create_mutex(scheduler_object);
+}

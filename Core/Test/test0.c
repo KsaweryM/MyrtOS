@@ -1,10 +1,14 @@
+/*
+ * The purpose of this test is to verify if the scheduler will perform the tasks assigned to it correctly (4 tasks, random order of adding tasks, random priorities of tasks)
+ */
+
 #include "kernel/kernel.h"
 #include "kernel/thread.h"
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 
-#define TEST0_REPETITIONS 400
+#define TEST0_REPETITIONS 5
 #define TIMER0_END 1000
 #define TIMER1_END 1400
 #define TIMER2_END 1200
@@ -161,7 +165,7 @@ uint32_t test0()
 		};
 
 		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING
+			.algorithm = ROUND_ROBIN_SCHEDULING
 		};
 
 		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
@@ -212,5 +216,5 @@ uint32_t test0()
 		assert(timer3_asert1);
 	}
 
-	return 1;
+	return 0;
 }

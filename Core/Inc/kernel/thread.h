@@ -5,6 +5,7 @@
 
 typedef struct thread_attributes
 {
+	char* thread_name;
 	void (*function)(void*);
 	void* function_arguments;
 	uint32_t stack_size;

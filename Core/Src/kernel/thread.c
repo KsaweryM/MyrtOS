@@ -4,6 +4,7 @@
 
 struct thread_control_block
 {
+	char* thread_name;
   uint32_t* stack_pointer;
   uint8_t thread_priority;
   uint32_t delay;
@@ -14,9 +15,12 @@ thread_control_block* thread_control_block_create(const thread_attributes* threa
 {
   register const uint32_t stack_size = thread_attributes_object->stack_size;
   thread_control_block* thread_control_block_object = malloc(sizeof(*thread_control_block_object));
+
+  thread_control_block_object->thread_name = thread_attributes_object->thread_name;
   thread_control_block_object->thread_priority = thread_attributes_object->thread_priority;
   thread_control_block_object->delay = 0;
   thread_control_block_object->allocated_memory_for_stack = malloc(sizeof(*thread_control_block_object->allocated_memory_for_stack) * stack_size);
+
   memset(thread_control_block_object->allocated_memory_for_stack, 0, stack_size);
 
   // Register PSR

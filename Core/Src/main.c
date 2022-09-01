@@ -84,6 +84,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   test0();
+  test1();
+  test2();
+  test3();
+  test4();
 
   /* USER CODE END 2 */
 
