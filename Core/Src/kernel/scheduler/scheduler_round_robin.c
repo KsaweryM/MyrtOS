@@ -179,6 +179,8 @@ uint32_t scheduler_round_robin_choose_next_thread(scheduler* scheduler_object, u
 		mutex_round_robin_data* mutex_data = (mutex_round_robin_data*) scheduler_data->current_mutex->mutex_data;
 		list_push_back(mutex_data->suspended_threads, suspended_thread);
 
+		scheduler_data->current_mutex = 0;
+
 		scheduler_data->current_thread = (thread_control_block*)iterator_get_data(scheduler_data->threads_iterator);
 
 		scheduler_data->state = (scheduler_data->current_thread == 0) ?

@@ -1,12 +1,15 @@
 #ifndef __TESTS_H_
 #define __TESTS_H_
 
-#include <stdint.h>
+#define GLOBAL_TEST_REPETITIONS 50
 
-uint32_t test0();
-uint32_t test1();
-uint32_t test2();
-uint32_t test3();
-uint32_t test4();
+#include <stdint.h>
+#include <kernel/scheduler/scheduler.h>
+
+uint32_t test0(SCHEDULER_ALGORITHM scheduler_algorithm);
+uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm);
+uint32_t test2(SCHEDULER_ALGORITHM scheduler_algorithm);
+uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm);
+uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm);
 
 #endif

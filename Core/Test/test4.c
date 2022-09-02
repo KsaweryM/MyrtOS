@@ -2,6 +2,7 @@
  * The purpose of this test is to verify if mutex works correctly (1 task / 3 tasks / 5 tasks, random order of adding tasks, random priorities of tasks)
  */
 
+#include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
@@ -10,7 +11,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
+#ifndef GLOBAL_TEST_REPETITIONS
 #define TEST4_REPETITIONS 5
+#else
+#define TEST4_REPETITIONS GLOBAL_TEST_REPETITIONS
+#endif
+
 #define TEST4_END_VALUE 50
 
 uint32_t test4_nr_tasks = 0;
@@ -69,7 +75,7 @@ void test4_task2(void* args)
 	test4_task2_finished = 1;
 }
 
-uint32_t test4()
+uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST4_REPETITIONS; i++)
 	{
@@ -78,7 +84,7 @@ uint32_t test4()
 		};
 
 		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = ROUND_ROBIN_SCHEDULING
+			.algorithm = scheduler_algorithm
 		};
 
 
@@ -86,7 +92,7 @@ uint32_t test4()
 
 		mutex* mutex_object = mutex_create();
 
-		test4_nr_tasks = rand() % 10;
+		test4_nr_tasks = rand() % 10 + 1;
 
 		test4_args* args = malloc(sizeof(*args) * test4_nr_tasks);
 		uint32_t* finished = malloc(sizeof(*finished) * test4_nr_tasks);
@@ -116,7 +122,7 @@ uint32_t test4()
 				.function = test4_task2,
 				.function_arguments = 0,
 				.stack_size = 1000,
-				.thread_priority = 16
+				.thread_priority = rand() % 16
 		};
 
 		kernel_add_thread(kernel_object, &thread2_attributes);

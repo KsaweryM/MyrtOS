@@ -83,11 +83,11 @@ int main(void)
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
 
-  test0();
-  test1();
-  test2();
-  test3();
-  test4();
+  test0(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // basic test
+  test1(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // mutex test
+  test2(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // thread yield test
+  test3(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // thread yield test 2
+  test4(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // mutex test2
 
   /* USER CODE END 2 */
 

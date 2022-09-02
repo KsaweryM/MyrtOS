@@ -2,13 +2,19 @@
  * The purpose of this test is to verify if the scheduler will perform the tasks assigned to it correctly (4 tasks, random order of adding tasks, random priorities of tasks)
  */
 
-#include "kernel/kernel.h"
-#include "kernel/thread.h"
+#include "tests.h"
+#include <kernel/kernel.h>
+#include <kernel/thread.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
 
+#ifndef GLOBAL_TEST_REPETITIONS
 #define TEST0_REPETITIONS 5
+#else
+#define TEST0_REPETITIONS GLOBAL_TEST_REPETITIONS
+#endif
+
 #define TIMER0_END 1000
 #define TIMER1_END 1400
 #define TIMER2_END 1200
@@ -105,7 +111,7 @@ void test0_timer3(void* atr)
   }
 }
 
-uint32_t test0()
+uint32_t test0(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST0_REPETITIONS; i++)
 	{
@@ -165,7 +171,7 @@ uint32_t test0()
 		};
 
 		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = ROUND_ROBIN_SCHEDULING
+			.algorithm = scheduler_algorithm
 		};
 
 		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);

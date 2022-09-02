@@ -13,6 +13,7 @@ typedef enum SCHEDULER_PRIORITY_TIME_SLICING_STATE
 	SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD,
 	SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD,
 	DEACTIVATE_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD,
+	SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD,
 	NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD
 } SCHEDULER_PRIORITY_TIME_SLICING_STATE;
 
@@ -24,12 +25,24 @@ typedef struct scheduler_priority_time_slicing_data
 	iterator** threads_iterators;
 	uint32_t* main_thread_SP_register;
 	thread_control_block* current_thread;
+	mutex* current_mutex;
 	SCHEDULER_PRIORITY_TIME_SLICING_STATE state;
 } scheduler_priority_time_slicing_data;
+
+typedef struct mutex_priority_time_slicing_data
+{
+	list* suspended_threads;
+	iterator* suspended_threads_iterator;
+	uint32_t is_locked;
+} mutex_priority_time_slicing_data;
 
 static void scheduler_priority_time_slicing_deactivate_current_thread(void);
 static void scheduler_priority_time_slicing_destroy_deactivated_threads(scheduler* scheduler_object);
 static void scheduler_priority_time_slicing_destroy_list_content(list* list_object);
+
+static void mutex_priority_time_slicing_lock(mutex* mutex_object);
+static void mutex_priority_time_slicing_unlock(mutex* mutex_object);
+static void mutex_priority_time_slicing_destroy(mutex* mutex_object);
 
 scheduler* scheduler_priority_time_slicing_create(const scheduler_attributes* scheduler_attributes_object)
 {
@@ -45,6 +58,7 @@ scheduler* scheduler_priority_time_slicing_create(const scheduler_attributes* sc
 		scheduler_object->scheduler_methods->scheduler_is_context_to_save = scheduler_priority_time_slicing_is_context_to_save;
 		scheduler_object->scheduler_methods->scheduler_add_thread = scheduler_priority_time_slicing_add_thread;
 		scheduler_object->scheduler_methods->scheduler_choose_next_thread = scheduler_priority_time_slicing_choose_next_thread;
+		scheduler_object->scheduler_methods->scheduler_create_mutex = scheduler_priority_time_slicing_create_mutex;
 
 		scheduler_priority_time_slicing_data* scheduler_data = malloc(sizeof(*scheduler_data));
 
@@ -54,6 +68,8 @@ scheduler* scheduler_priority_time_slicing_create(const scheduler_attributes* sc
 		scheduler_data->threads_iterators = malloc(sizeof(*scheduler_data->threads_iterators) * NUMBER_PRIORITIES);
 		scheduler_data->main_thread_SP_register = 0;
 		scheduler_data->current_thread = 0;
+		scheduler_data->current_mutex = 0;
+
 		scheduler_data->state = SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
 
 		for (uint32_t i = 0; i < NUMBER_PRIORITIES; i++)
@@ -187,6 +203,34 @@ uint32_t scheduler_priority_time_slicing_choose_next_thread(scheduler* scheduler
 		scheduler_data->state = (scheduler_data->current_thread == 0) ?
 				NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD : SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
 	}
+	else if (scheduler_data->state == SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD)
+	{
+		assert(scheduler_data->current_mutex);
+
+		uint32_t thread_priority = thread_control_block_get_priority(scheduler_data->current_thread);
+		thread_control_block* suspended_thread = (thread_control_block*) cyclic_iterator_pop(scheduler_data->threads_iterators[thread_priority]);
+		thread_control_block_set_stack_pointer(suspended_thread, (uint32_t*) SP_register);
+
+		mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) scheduler_data->current_mutex->mutex_data;
+		list_push_back(mutex_data->suspended_threads, suspended_thread);
+
+		scheduler_data->current_mutex = 0;
+
+		int32_t iterator_index = NUMBER_PRIORITIES - 1;
+
+		do
+		{
+			iterator* iterator_object = scheduler_data->threads_iterators[iterator_index];
+
+			cyclic_iterator_next(iterator_object);
+			scheduler_data->current_thread = (thread_control_block*)iterator_get_data(iterator_object);
+			iterator_index--;
+
+		} while (scheduler_data->current_thread == 0 && iterator_index >= 0);
+
+		scheduler_data->state = (scheduler_data->current_thread == 0) ?
+				NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD : SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
+	}
 
 	if (scheduler_data->state == NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD)
 	{
@@ -213,7 +257,7 @@ static void scheduler_priority_time_slicing_deactivate_current_thread(void)
 	scheduler_priority_time_slicing_data* scheduler_data = (scheduler_priority_time_slicing_data*) scheduler_object->scheduler_data;
 
 	uint32_t current_thread_priority = thread_control_block_get_priority(scheduler_data->current_thread);
-	thread_control_block* deactivated_thread = iterator_pop(scheduler_data->threads_iterators[current_thread_priority]);
+	thread_control_block* deactivated_thread = cyclic_iterator_pop(scheduler_data->threads_iterators[current_thread_priority]);
 	list_push_back(scheduler_data->deactivated_threads, deactivated_thread);
 
 
@@ -245,7 +289,7 @@ static void scheduler_priority_time_slicing_destroy_list_content(list* list_obje
 
 	while (1)
 	{
-		thread_control_block* thread_control_block_object = (thread_control_block*) iterator_pop(iterator);
+		thread_control_block* thread_control_block_object = (thread_control_block*) cyclic_iterator_pop(iterator);
 
 		if (thread_control_block_object == 0)
 		{
@@ -256,6 +300,90 @@ static void scheduler_priority_time_slicing_destroy_list_content(list* list_obje
 	}
 
 	iterator_destroy(iterator);
+
+	CRITICAL_PATH_EXIT();
+}
+
+mutex* scheduler_priority_time_slicing_create_mutex(scheduler* scheduler_object)
+{
+	CRITICAL_PATH_ENTER();
+
+	mutex* mutex_object = malloc(sizeof(*mutex_object));
+
+	mutex_priority_time_slicing_data* mutex_data = malloc(sizeof(*mutex_data));
+
+	mutex_data->suspended_threads = list_create();
+	mutex_data->suspended_threads_iterator = iterator_create(mutex_data->suspended_threads);
+	mutex_data->is_locked = 0;
+
+	mutex_object->mutex_data = mutex_data;
+
+	mutex_object->mutex_lock = mutex_priority_time_slicing_lock;
+	mutex_object->mutex_unlock = mutex_priority_time_slicing_unlock;
+	mutex_object->mutex_destroy = mutex_priority_time_slicing_destroy;
+
+	CRITICAL_PATH_EXIT();
+
+	return mutex_object;
+}
+
+static void mutex_priority_time_slicing_lock(mutex* mutex_object)
+{
+	CRITICAL_PATH_ENTER();
+
+	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex_object->mutex_data;
+
+	mutex_data->is_locked++;
+
+	if (mutex_data->is_locked >= 2)
+	{
+		scheduler_priority_time_slicing_data* scheduler_data = (scheduler_priority_time_slicing_data*) scheduler_priority_time_slicing_global_object->scheduler_data;
+		scheduler_data->state = SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
+		scheduler_data->current_mutex = mutex_object;
+
+		thread_yield();
+	}
+
+	CRITICAL_PATH_EXIT();
+}
+
+static void mutex_priority_time_slicing_unlock(mutex* mutex_object)
+{
+	CRITICAL_PATH_ENTER();
+	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex_object->mutex_data;
+
+	assert(mutex_data->is_locked);
+
+	if (mutex_data->is_locked)
+	{
+		mutex_data->is_locked--;
+
+		if (!list_is_empty(mutex_data->suspended_threads))
+		{
+			iterator_reset(mutex_data->suspended_threads_iterator);
+			thread_control_block* resumed_thread = cyclic_iterator_pop(mutex_data->suspended_threads_iterator);
+			scheduler_priority_time_slicing_data* scheduler_data = (scheduler_priority_time_slicing_data*) scheduler_priority_time_slicing_global_object->scheduler_data;
+
+			uint32_t thread_priority = thread_control_block_get_priority(scheduler_data->current_thread);
+			list_push_back(scheduler_data->threads_lists[thread_priority], resumed_thread);
+		}
+	}
+
+	CRITICAL_PATH_EXIT();
+}
+
+static void mutex_priority_time_slicing_destroy(mutex* mutex_object)
+{
+	CRITICAL_PATH_ENTER();
+
+	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex_object->mutex_data;
+
+	assert(list_is_empty(mutex_data->suspended_threads));
+	list_destroy(mutex_data->suspended_threads);
+	iterator_destroy(mutex_data->suspended_threads_iterator);
+
+	free(mutex_object->mutex_data);
+	free(mutex_object);
 
 	CRITICAL_PATH_EXIT();
 }

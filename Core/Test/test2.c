@@ -2,6 +2,7 @@
  * The purpose of this test is thread_yield works correctly
  */
 
+#include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
@@ -10,15 +11,20 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define TEST2_REPETITIONS 4
-#define TEST2_END_VALUE 100
+#ifndef GLOBAL_TEST_REPETITIONS
+#define TEST2_REPETITIONS 5
+#else
+#define TEST2_REPETITIONS GLOBAL_TEST_REPETITIONS
+#endif
+
+#define TEST1_END_VALUE 100
 
 volatile int test2_counter = 0;
 volatile int test2_d2 = 0;
 
 void test2_task0(void* args)
 {
-	for (uint32_t i = 0; i < TEST2_END_VALUE; i++)
+	for (uint32_t i = 0; i < TEST1_END_VALUE; i++)
 	{
 		test2_counter++;
 		thread_yield();
@@ -29,14 +35,14 @@ void test2_task0(void* args)
 
 void test2_task1(void* args)
 {
-	for (uint32_t i = 0; i < TEST2_END_VALUE; i++)
+	for (uint32_t i = 0; i < TEST1_END_VALUE; i++)
 	{
 		test2_counter=0;
 		thread_yield();
 	}
 }
 
-uint32_t test2()
+uint32_t test2(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	thread_attributes task0_attributes = {
 		.thread_name = "task1",
@@ -60,7 +66,7 @@ uint32_t test2()
 	};
 
 	scheduler_attributes scheduler_attributes_object = {
-		.algorithm = ROUND_ROBIN_SCHEDULING
+		.algorithm = scheduler_algorithm
 	};
 
 	kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);

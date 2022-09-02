@@ -2,6 +2,7 @@
  * The purpose of this test is thread_yield works correctly
  */
 
+#include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
 #include <kernel/mutex.h>
@@ -10,7 +11,12 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define TEST3_REPETITIONS 4
+#ifndef GLOBAL_TEST_REPETITIONS
+#define TEST3_REPETITIONS 5
+#else
+#define TEST3_REPETITIONS GLOBAL_TEST_REPETITIONS
+#endif
+
 #define TEST3_END_VALUE 100
 
 volatile uint32_t test3_task0_finished = 0;
@@ -83,7 +89,7 @@ void test3_task3(void* args)
 	test3_task3_finished++;
 }
 
-uint32_t test3(void)
+uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST3_REPETITIONS; i++)
 	{
@@ -124,7 +130,7 @@ uint32_t test3(void)
 		};
 
 		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = ROUND_ROBIN_SCHEDULING
+			.algorithm = scheduler_algorithm
 		};
 
 		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
