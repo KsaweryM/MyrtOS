@@ -28,14 +28,14 @@ volatile uint32_t task3_finished = 0;
 
 typedef struct task1_args
 {
-	mutex* mutex_object;
+	mutex_t* mutex_object;
 	uint32_t* counter;
 	uint32_t* common;
 } task1_args;
 
 typedef struct task2_args
 {
-	mutex* mutex_object;
+	mutex_t* mutex_object;
 	uint32_t* counter;
 	uint32_t* end;
 } task2_args;
@@ -49,7 +49,7 @@ typedef struct task3_args
 
 void test1_task0(void* args)
 {
-	mutex* mutex_object = mutex_create();
+	mutex_t* mutex_object = mutex_create();
 	mutex_destroy(mutex_object);
 
 	*((uint32_t*) args) = 1;
@@ -74,7 +74,7 @@ void test1_task1(void* args)
 		assert(task1_counter == i + 1);
 		assert(task2_counter == 0);
 
-		thread_yield();
+		yield();
 	}
 
 	assert(task1_counter == TEST1_END_VALUE);
@@ -100,7 +100,7 @@ void test1_task2(void* args)
 		assert(task1_counter == TEST1_END_VALUE);
 		assert(task2_counter == i + 1);
 
-		thread_yield();
+		yield();
 	}
 
 	assert(task2_counter == TEST1_END_VALUE);
@@ -116,7 +116,7 @@ void test1_task3(void* args)
 
 	for (uint32_t i = 0; i < 10 * TEST1_END_VALUE; i++)
 	{
-		thread_yield();
+		yield();
 	}
 
 	(*task3_args_object->end) = 1;
@@ -130,7 +130,7 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 	for (uint32_t i = 0; i < TEST1_REPETITIONS; i++)
 	{
 		uint32_t end = 0;
-		thread_attributes task0_attributes = {
+		thread_attributes_t task0_attributes = {
 			.thread_name = "task0",
 			.function = test1_task0,
 			.function_arguments = (void*)&end,
@@ -138,16 +138,11 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 			.thread_priority = 0
 		};
 
-
-		kernel_attributes kernel_attributes_object = {
-
+		kernel_attributes_t kernel_attributes_object = {
+				.scheduler_algorithm = scheduler_algorithm
 		};
 
-		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = scheduler_algorithm
-		};
-
-		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
+		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
 
 		kernel_add_thread(kernel_object, &task0_attributes);
 		kernel_launch(kernel_object);
@@ -160,9 +155,9 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 		task1_counter = 0;
 		task2_counter = 0;
 
-		kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
+		kernel_object = kernel_create(&kernel_attributes_object);
 
-		mutex* mutex_object = mutex_create();
+		mutex_t* mutex_object = mutex_create();
 		uint32_t counter = 0;
 		uint32_t common = 0;
 		end = 0;
@@ -184,7 +179,7 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 				.common = &common
 		};
 
-		thread_attributes task1_attributes = {
+		thread_attributes_t task1_attributes = {
 					.thread_name = "task1",
 					.function = test1_task1,
 					.function_arguments = (void*)&task1_args_object,
@@ -192,7 +187,7 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_priority = 11
 				};
 
-		thread_attributes task2_attributes = {
+		thread_attributes_t task2_attributes = {
 					.thread_name = "task2",
 					.function = test1_task2,
 					.function_arguments = (void*)&task2_args_object,
@@ -200,7 +195,7 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_priority = 10
 				};
 
-		thread_attributes task3_attributes = {
+		thread_attributes_t task3_attributes = {
 					.thread_name = "task3",
 					.function = test1_task3,
 					.function_arguments = (void*)&task3_args_object,
@@ -211,7 +206,7 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 
 		if (scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
 		{
-			thread_attributes threads_attributes[] = {task1_attributes, task2_attributes, task3_attributes};
+			thread_attributes_t threads_attributes[] = {task1_attributes, task2_attributes, task3_attributes};
 			uint32_t used_count = 0;
 			uint32_t used[] = {0, 0, 0};
 

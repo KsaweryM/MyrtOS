@@ -3,12 +3,8 @@
 
 #include "kernel/scheduler/scheduler.h"
 
-scheduler* scheduler_priority_time_slicing_create(const scheduler_attributes* scheduler_attributes_object);
-void scheduler_priority_time_slicing_destroy(scheduler* scheduler_object);
+typedef struct scheduler_priority_time_slicing_t scheduler_priority_time_slicing_t;
 
-uint32_t scheduler_priority_time_slicing_is_context_to_save(const scheduler* scheduler_object);
-uint32_t scheduler_priority_time_slicing_choose_next_thread(scheduler* scheduler_object, uint32_t SP_register);
-void scheduler_priority_time_slicing_add_thread(scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
-mutex* scheduler_priority_time_slicing_create_mutex(scheduler* scheduler_object);
+scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_create();
 
 #endif

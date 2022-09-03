@@ -1,42 +1,24 @@
 #include <kernel/atomic.h>
 #include <kernel/list.h>
 #include <kernel/scheduler/scheduler.h>
-#include <kernel/scheduler/scheduler_factory.h>
+#include <kernel/scheduler/scheduler_p.h>
 
-scheduler* scheduler_create(const scheduler_attributes* scheduler_attributes_object)
+void scheduler_destroy(scheduler_t* scheduler)
 {
-  scheduler* scheduler_object = 0;
-
-  CRITICAL_PATH_ENTER();
-
-  scheduler_object = scheduler_factory_create_scheduler(scheduler_attributes_object);
-
-  CRITICAL_PATH_EXIT();
-
-  return scheduler_object;
+	scheduler->scheduler_destroy(scheduler);
 }
 
-void scheduler_destroy(scheduler* scheduler_object)
+void scheduler_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes)
 {
-	scheduler_object->scheduler_methods->scheduler_destroy(scheduler_object);
+	scheduler->scheduler_add_thread(scheduler, thread_attributes);
 }
 
-uint32_t scheduler_is_context_to_save(const scheduler* scheduler_object)
+uint32_t* scheduler_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register)
 {
-	return scheduler_object->scheduler_methods->scheduler_is_context_to_save(scheduler_object);
+	return scheduler->scheduler_choose_next_thread(scheduler, SP_register);
 }
 
-void scheduler_add_thread(scheduler* scheduler_object, const thread_attributes* thread_attributes_object)
+mutex_t* scheduler_create_mutex(scheduler_t* scheduler)
 {
-	scheduler_object->scheduler_methods->scheduler_add_thread(scheduler_object, thread_attributes_object);
-}
-
-uint32_t scheduler_choose_next_thread(scheduler* scheduler_object, uint32_t SP_register)
-{
-	return scheduler_object->scheduler_methods->scheduler_choose_next_thread(scheduler_object, SP_register);
-}
-
-mutex* scheduler_create_mutex(scheduler* scheduler_object)
-{
-	return scheduler_object->scheduler_methods->scheduler_create_mutex(scheduler_object);
+	return scheduler->scheduler_create_mutex(scheduler);
 }

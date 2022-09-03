@@ -138,45 +138,41 @@ uint32_t test0(SCHEDULER_ALGORITHM scheduler_algorithm)
 		uint32_t end_counter = 0;
 		uint32_t* end = &timer3_args[3];
 
-		thread_attributes timer0_attributes = {
+		thread_attributes_t timer0_attributes = {
 			.function = test0_timer0,
 			.function_arguments = (void*)&timer0_args,
 			.stack_size = 1000,
 			.thread_priority = rand() % 16
 		};
 
-		thread_attributes timer1_attributes = {
+		thread_attributes_t timer1_attributes = {
 			.function = test0_timer1,
 			.function_arguments = (void*)&timer1_args,
 			.stack_size = 1000,
 			.thread_priority = rand() % 16
 		};
 
-		thread_attributes timer2_attributes = {
+		thread_attributes_t timer2_attributes = {
 			.function = test0_timer2,
 			.function_arguments = (void*)&timer2_args,
 			.stack_size = 1000,
 			.thread_priority = rand() % 16
 		};
 
-		thread_attributes timer3_attributes = {
+		thread_attributes_t timer3_attributes = {
 			.function = test0_timer3,
 			.function_arguments = (void*)&timer3_args,
 			.stack_size = 1000,
 			.thread_priority = rand() % 16
 		};
 
-		kernel_attributes kernel_attributes_object = {
-
+		kernel_attributes_t kernel_attributes_object = {
+				.scheduler_algorithm = scheduler_algorithm
 		};
 
-		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = scheduler_algorithm
-		};
+		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
 
-		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
-
-		thread_attributes threads_attributes[] = {timer0_attributes, timer1_attributes, timer2_attributes, timer3_attributes};
+		thread_attributes_t threads_attributes[] = {timer0_attributes, timer1_attributes, timer2_attributes, timer3_attributes};
 		register const uint32_t nr_threads = sizeof(threads_attributes) / sizeof(threads_attributes[0]);
 		uint32_t used[] = {0, 0, 0, 0};
 		uint32_t nr_used = 0;

@@ -1,132 +1,132 @@
 #include <kernel/list.h>
 
-struct list_item
+struct list_item_t
 {
-  struct list_item* next;
-  struct list_item* previous;
+  struct list_item_t* next;
+  struct list_item_t* previous;
   void* data;
 };
 
-struct list
+struct list_t
 {
-  list_item* list_begin;
-  list_item* list_end;
+  list_item_t* list_begin;
+  list_item_t* list_end;
 };
 
-struct iterator
+struct iterator_t
 {
-  list_item* current_list_item;
-  list* iterator_owner;
+  list_item_t* current_list_item;
+  list_t* iterator_owner;
 };
 
-list* list_create(void)
+list_t* list_create(void)
 {
-  list* list_object = malloc(sizeof(*list_object));
+  list_t* list = malloc(sizeof(*list));
 
-  list_object->list_begin = 0;
-  list_object->list_end = 0;
+  list->list_begin = 0;
+  list->list_end = 0;
 
-  return list_object;
+  return list;
 }
 
-int32_t list_destroy(list* list_object)
+int32_t list_destroy(list_t* list)
 {
-  if (list_object->list_begin != 0)
+  if (list->list_begin != 0)
   {
     return -1;
   }
 
-  free(list_object);
+  free(list);
 
   return 0;
 }
 
 
-void list_push_front(list* list_object, void* data)
+void list_push_front(list_t* list, void* data)
 {
-  list_item* list_item_object = malloc(sizeof(*list_item_object));
+  list_item_t* list_item = malloc(sizeof(*list_item));
 
-  list_item_object->previous = 0;
-  list_item_object->next = 0;
-  list_item_object->data = data;
+  list_item->previous = 0;
+  list_item->next = 0;
+  list_item->data = data;
 
 
-  if (list_object->list_begin == 0)
+  if (list->list_begin == 0)
   {
-    list_object->list_begin = list_item_object;
-    list_object->list_end = list_item_object;
+    list->list_begin = list_item;
+    list->list_end = list_item;
   }
   else
   {
-    list_item_object->next = list_object->list_begin;
-    list_object->list_begin->previous = list_item_object;
+    list_item->next = list->list_begin;
+    list->list_begin->previous = list_item;
 
-    list_object->list_begin = list_item_object;
+    list->list_begin = list_item;
   }
 }
 
-void list_push_back(list* list_object, void* data)
+void list_push_back(list_t* list, void* data)
 {
-  list_item* list_item_object = malloc(sizeof(*list_item_object));
+  list_item_t* list_item = malloc(sizeof(*list_item));
 
-  list_item_object->previous = 0;
-  list_item_object->next = 0;
-  list_item_object->data = data;
+  list_item->previous = 0;
+  list_item->next = 0;
+  list_item->data = data;
 
-  if (list_object->list_begin == 0)
+  if (list->list_begin == 0)
   {
-    list_object->list_begin = list_item_object;
-    list_object->list_end = list_item_object;
+    list->list_begin = list_item;
+    list->list_end = list_item;
   }
   else
   {
-    list_item_object->previous = list_object->list_end;
-    list_object->list_end->next = list_item_object;
+    list_item->previous = list->list_end;
+    list->list_end->next = list_item;
 
-    list_object->list_end = list_item_object;
+    list->list_end = list_item;
   }
 }
 
-uint32_t list_is_empty(const list* list_object)
+uint32_t list_is_empty(const list_t* list)
 {
-	return list_object->list_begin == 0;
+	return list->list_begin == 0;
 }
 
-iterator* iterator_create(list* list_object)
+iterator_t* iterator_create(list_t* list)
 {
-  iterator* iterator_object = malloc(sizeof(*iterator_object));
+  iterator_t* iterator = malloc(sizeof(*iterator));
 
-  iterator_object->current_list_item = list_object->list_begin;
-  iterator_object->iterator_owner = list_object;
+  iterator->current_list_item = list->list_begin;
+  iterator->iterator_owner = list;
 
-  return iterator_object;
+  return iterator;
 }
 
-void iterator_destroy(iterator* iterator_object)
+void iterator_destroy(iterator_t* iterator)
 {
-  free(iterator_object);
+  free(iterator);
 }
 
-void* iterator_get_data(const iterator* iterator_object)
+void* iterator_get_data(const iterator_t* iterator)
 {
-  if (iterator_object->current_list_item == 0)
+  if (iterator->current_list_item == 0)
   {
     return 0;
   }
 
-  return iterator_object->current_list_item->data;
+  return iterator->current_list_item->data;
 }
 
-void* iterator_pop(iterator* iterator_object)
+void* iterator_pop(iterator_t* iterator)
 {
-  if (iterator_object->current_list_item == 0)
+  if (iterator->current_list_item == 0)
   {
     return 0;
   }
 
-  list_item* current_list_item = iterator_object->current_list_item;
-  list_item* previous_list_item = current_list_item->previous;
-  list_item* next_list_item = current_list_item->next;
+  list_item_t* current_list_item = iterator->current_list_item;
+  list_item_t* previous_list_item = current_list_item->previous;
+  list_item_t* next_list_item = current_list_item->next;
 
   if (previous_list_item != 0 && next_list_item != 0)
   {
@@ -136,90 +136,90 @@ void* iterator_pop(iterator* iterator_object)
   else if (previous_list_item == 0)
   {
     next_list_item->previous = 0;
-    iterator_object->iterator_owner->list_begin = next_list_item;
+    iterator->iterator_owner->list_begin = next_list_item;
   }
   else if (next_list_item == 0)
   {
     previous_list_item->next = 0;
-    iterator_object->iterator_owner->list_end = previous_list_item;
+    iterator->iterator_owner->list_end = previous_list_item;
   }
   else
   {
-    iterator_object->iterator_owner->list_begin = 0;
-    iterator_object->iterator_owner->list_end = 0;
+    iterator->iterator_owner->list_begin = 0;
+    iterator->iterator_owner->list_end = 0;
   }
 
   void* data = current_list_item->data;
 
-  iterator_object->current_list_item = next_list_item;
+  iterator->current_list_item = next_list_item;
 
   free(current_list_item);
 
   return data;
 }
 
-void iterator_reset(iterator* iterator_object)
+void iterator_reset(iterator_t* iterator)
 {
-  iterator_object->current_list_item = iterator_object->iterator_owner->list_begin;
+  iterator->current_list_item = iterator->iterator_owner->list_begin;
 }
 
-uint32_t iterator_next(iterator* iterator_object)
+uint32_t iterator_next(iterator_t* iterator)
 {
-  if (iterator_object->current_list_item != 0)
+  if (iterator->current_list_item != 0)
   {
-    iterator_object->current_list_item = iterator_object->current_list_item->next;
+    iterator->current_list_item = iterator->current_list_item->next;
   }
 
-  return iterator_object->current_list_item == 0;
+  return iterator->current_list_item == 0;
 }
 
 
-uint32_t iterator_previous(iterator* iterator_object)
+uint32_t iterator_previous(iterator_t* iterator)
 {
-  if (iterator_object->current_list_item != 0)
+  if (iterator->current_list_item != 0)
   {
-    iterator_object->current_list_item = iterator_object->current_list_item->previous;
+    iterator->current_list_item = iterator->current_list_item->previous;
   }
 
-  return iterator_object->current_list_item == 0;
+  return iterator->current_list_item == 0;
 }
 
-void* cyclic_iterator_pop(iterator* iterator_object)
+void* cyclic_iterator_pop(iterator_t* iterator)
 {
-	void* data = iterator_pop(iterator_object);
+	void* data = iterator_pop(iterator);
 
-	if (iterator_object->current_list_item == 0)
+	if (iterator->current_list_item == 0)
 	{
-		 iterator_object->current_list_item = iterator_object->iterator_owner->list_begin;
+		 iterator->current_list_item = iterator->iterator_owner->list_begin;
 	}
 
 	return data;
 }
 
-uint32_t cyclic_iterator_next(iterator* iterator_object)
+uint32_t cyclic_iterator_next(iterator_t* iterator)
 {
-  if (iterator_object->current_list_item == 0 || iterator_object->current_list_item->next == 0)
+  if (iterator->current_list_item == 0 || iterator->current_list_item->next == 0)
   {
-    iterator_object->current_list_item = iterator_object->iterator_owner->list_begin;
+    iterator->current_list_item = iterator->iterator_owner->list_begin;
   }
   else
   {
-    iterator_object->current_list_item = iterator_object->current_list_item->next;
+    iterator->current_list_item = iterator->current_list_item->next;
   }
 
-  return iterator_object->current_list_item == 0;
+  return iterator->current_list_item == 0;
 }
 
-uint32_t cyclic_iterator_previous(iterator* iterator_object)
+uint32_t cyclic_iterator_previous(iterator_t* iterator)
 {
-  if (iterator_object->current_list_item == 0 || iterator_object->current_list_item->previous == 0)
+  if (iterator->current_list_item == 0 || iterator->current_list_item->previous == 0)
   {
-    iterator_object->current_list_item = iterator_object->iterator_owner->list_end;
+    iterator->current_list_item = iterator->iterator_owner->list_end;
   }
   else
   {
-    iterator_object->current_list_item = iterator_object->current_list_item->previous;
+    iterator->current_list_item = iterator->current_list_item->previous;
   }
 
-  return iterator_object->current_list_item == 0;
+  return iterator->current_list_item == 0;
 }

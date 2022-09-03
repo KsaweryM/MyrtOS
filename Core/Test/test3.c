@@ -38,7 +38,7 @@ void test3_task0(void* args)
 		assert(test3_task0_counter == test3_task2_counter + 1);
 		assert(test3_task0_counter == test3_task3_counter + 1);
 
-		thread_yield();
+		yield();
 	}
 
 	test3_task0_finished++;
@@ -53,7 +53,7 @@ void test3_task1(void* args)
 		assert(test3_task1_counter == test3_task2_counter + 1);
 		assert(test3_task1_counter == test3_task3_counter + 1);
 
-		thread_yield();
+		yield();
 	}
 
 	test3_task1_finished++;
@@ -68,7 +68,7 @@ void test3_task2(void* args)
 		assert(test3_task2_counter == test3_task1_counter);
 		assert(test3_task2_counter == test3_task3_counter + 1);
 
-		thread_yield();
+		yield();
 	}
 
 	test3_task2_finished++;
@@ -83,7 +83,7 @@ void test3_task3(void* args)
 		assert(test3_task3_counter == test3_task1_counter);
 		assert(test3_task3_counter == test3_task2_counter);
 
-		thread_yield();
+		yield();
 	}
 
 	test3_task3_finished++;
@@ -93,7 +93,7 @@ uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST3_REPETITIONS; i++)
 	{
-		thread_attributes task0_attributes = {
+		thread_attributes_t task0_attributes = {
 			.thread_name = "task0",
 			.function = test3_task0,
 			.function_arguments = (void*)0,
@@ -101,7 +101,7 @@ uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 			.thread_priority = 0
 		};
 
-		thread_attributes task1_attributes = {
+		thread_attributes_t task1_attributes = {
 			.thread_name = "task1",
 			.function = test3_task1,
 			.function_arguments = (void*)0,
@@ -109,7 +109,7 @@ uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 			.thread_priority = 0
 		};
 
-		thread_attributes task2_attributes = {
+		thread_attributes_t task2_attributes = {
 			.thread_name = "task2",
 			.function = test3_task2,
 			.function_arguments = (void*)0,
@@ -117,7 +117,7 @@ uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 			.thread_priority = 0
 		};
 
-		thread_attributes task3_attributes = {
+		thread_attributes_t task3_attributes = {
 			.thread_name = "task3",
 			.function = test3_task3,
 			.function_arguments = (void*)0,
@@ -125,15 +125,11 @@ uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm)
 			.thread_priority = 0
 		};
 
-		kernel_attributes kernel_attributes_object = {
-
+		kernel_attributes_t kernel_attributes_object = {
+				.scheduler_algorithm = scheduler_algorithm
 		};
 
-		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = scheduler_algorithm
-		};
-
-		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
+		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
 
 		kernel_add_thread(kernel_object, &task0_attributes);
 		kernel_add_thread(kernel_object, &task1_attributes);

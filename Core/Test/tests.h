@@ -1,7 +1,7 @@
 #ifndef __TESTS_H_
 #define __TESTS_H_
 
-#define GLOBAL_TEST_REPETITIONS 50
+#define GLOBAL_TEST_REPETITIONS 5
 
 #include <stdint.h>
 #include <kernel/scheduler/scheduler.h>

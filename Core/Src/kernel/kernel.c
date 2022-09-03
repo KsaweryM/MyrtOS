@@ -2,62 +2,75 @@
 #include <kernel/kernel.h>
 #include <kernel/list.h>
 #include <kernel/scheduler/scheduler.h>
+#include <kernel/scheduler/scheduler_round_robin.h>
+#include <kernel/scheduler/scheduler_priority_time_slicing.h>
 #include <assert.h>
 
 #define INTCTRL			(*((volatile uint32_t *)0xE000ED04))
-#define PENDSTET		(1U<<26)
+#define PENDSTET		(1U << 26)
 #define CLKSOURCE		(1U << 2)
 #define TICKINT			(1U << 1)
 #define ENABLE			(1U << 0)
 
-static void system_timer_initialize(uint32_t CPU_frequency);
-static void delay_timer_initialize(uint32_t CPU_frequency);
-static uint32_t get_CPU_frequency();
+static void __system_timer_initialize(uint32_t CPU_frequency);
+static uint32_t __get_CPU_frequency();
+static uint32_t* __choose_next_thread(uint32_t* SP_register);
 
-struct kernel
+struct kernel_t
 {
-  scheduler* scheduler_object;
+  scheduler_t* scheduler;
 };
 
-kernel* kernel_global_object = 0;
+kernel_t* kernel_g = 0;
 
-kernel* kernel_create(const kernel_attributes* kernel_attributes_object, const scheduler_attributes* scheduler_attributes_object)
+kernel_t* kernel_get_instance(void)
 {
-  CRITICAL_PATH_ENTER();
-
-  if (kernel_global_object == 0)
-  {
-    kernel_global_object = malloc(sizeof(*kernel_global_object));
-
-    kernel_global_object->scheduler_object = scheduler_create(scheduler_attributes_object);
-  }
-
-  CRITICAL_PATH_EXIT();
-
-  return kernel_global_object;
+	return kernel_g;
 }
 
-kernel* kernel_get_instance(void)
+kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
 {
   CRITICAL_PATH_ENTER();
+  
+  assert(!kernel_g);
 
-	assert(kernel_global_object);
+  kernel_g = malloc(sizeof(*kernel_g));
+  kernel_g->scheduler = 0;
+
+  switch (kernel_attributes->scheduler_algorithm)
+  {
+  case ROUND_ROBIN_SCHEDULING:
+  	kernel_g->scheduler = (scheduler_t*) scheduler_round_robin_create();
+  	break;
+  case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING:
+  	kernel_g->scheduler = (scheduler_t*) scheduler_priority_time_slicing_create();
+  	break;
+  case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING:
+  	break;
+  case COOPERATIVE_SCHEDULING:
+  	break;
+  }
+
+	assert(kernel_g->scheduler);
 
   CRITICAL_PATH_EXIT();
 
-  return kernel_global_object;
+  return kernel_g;
 }
 
 //TODO: go back to main thread and disable SysTick Interrupt
-void kernel_destroy(kernel* kernel_object)
+void kernel_destroy(kernel_t* kernel)
 {
   CRITICAL_PATH_ENTER();
 
-  scheduler_destroy(kernel_object->scheduler_object);
+  assert(kernel == kernel_g);
+  assert(kernel_g);
+  
+  scheduler_destroy(kernel_g->scheduler);
 
-  free(kernel_object);
+  free(kernel_g);
 
-  kernel_global_object = 0;
+  kernel_g = 0;
 
   // disable sysTick
   SysTick->CTRL &= !TICKINT;
@@ -68,53 +81,38 @@ void kernel_destroy(kernel* kernel_object)
   CRITICAL_PATH_EXIT();
 }
 
-void kernel_launch(const kernel* kernel_object)
+void kernel_launch(const kernel_t* kernel)
 {
-  uint32_t CPU_frequency = get_CPU_frequency();
+  uint32_t CPU_frequency = __get_CPU_frequency();
 
-  system_timer_initialize(CPU_frequency);
-  delay_timer_initialize(CPU_frequency);
+  __system_timer_initialize(CPU_frequency);
 
-  thread_yield();
+  yield();
 }
 
-void kernel_suspend(const kernel* kernel_object)
-{
-  CRITICAL_PATH_ENTER();
-}
-
-void kernel_resume(const kernel* kernel_object)
-{
-  CRITICAL_PATH_EXIT();
-}
-
-void kernel_add_thread(kernel* kernel_object, const thread_attributes* thread_attributes_object)
+void kernel_add_thread(kernel_t* kernel, const thread_attributes_t* thread_attributes)
 {
   CRITICAL_PATH_ENTER();
 
-  scheduler_add_thread(kernel_object->scheduler_object, thread_attributes_object);
+  scheduler_add_thread(kernel->scheduler, thread_attributes);
 
   CRITICAL_PATH_EXIT();
 }
 
-mutex* kernel_create_mutex(kernel* kernel_object)
+mutex_t* kernel_create_mutex(kernel_t* kernel)
 {
   CRITICAL_PATH_ENTER();
 
-  assert(kernel_object);
+  assert(kernel);
 
-  mutex* mutex_object = scheduler_create_mutex(kernel_object->scheduler_object);
+  mutex_t* mutex = scheduler_create_mutex(kernel->scheduler);
 
   CRITICAL_PATH_EXIT();
 
-  return mutex_object;
+  return mutex;
 }
 
-void thread_delay(uint32_t seconds)
-{
-}
-
-void thread_yield(void)
+void yield(void)
 {
   __disable_irq();
   SysTick->VAL = 0;
@@ -125,38 +123,17 @@ void thread_yield(void)
   while (INTCTRL & PENDSTET);
 }
 
-uint32_t kernel_is_context_to_save()
-{
-  return scheduler_is_context_to_save(kernel_global_object->scheduler_object);
-}
-
-uint32_t kernel_choose_next_thread(uint32_t SP_register)
-{
-  return scheduler_choose_next_thread(kernel_global_object->scheduler_object, SP_register);
-}
-
-
 __attribute__((naked)) void SysTick_Handler(void)
 {
   __asm("CPSID  I");
 
-  __asm("PUSH {LR}");
+  __asm("save_contex: PUSH {R4-R11}");
 
-  __asm("BL kernel_is_context_to_save");
-
-  __asm("POP {LR}");
-
-  __asm("CMP R0, #0");
-
-  __asm("BEQ save_contex_end");
-
-  __asm("save_contex_begin: PUSH {R4-R11}");
-
-  __asm("save_contex_end: MOV R0, SP");
+  __asm("MOV R0, SP");
 
   __asm("PUSH {LR}");
 
-  __asm("BL kernel_choose_next_thread");
+  __asm("BL __choose_next_thread");
 
   __asm("POP {LR}");
 
@@ -169,7 +146,12 @@ __attribute__((naked)) void SysTick_Handler(void)
   __asm("BX LR");
 }
 
-static void system_timer_initialize(uint32_t CPU_frequency)
+__attribute__((unused)) static uint32_t* __choose_next_thread(uint32_t* SP_register)
+{
+  return scheduler_choose_next_thread(kernel_g->scheduler, SP_register);
+}
+
+static void __system_timer_initialize(uint32_t CPU_frequency)
 {
   /*
    kernel uses a 24-bit system timer SysTick.
@@ -240,12 +222,7 @@ static void system_timer_initialize(uint32_t CPU_frequency)
   SysTick->CTRL |= ENABLE;
 }
 
-static void delay_timer_initialize(uint32_t CPU_frequency)
-{
-
-}
-
-static uint32_t get_CPU_frequency()
+static uint32_t __get_CPU_frequency()
 {
   // TODO: get current CPU clock frequency
   return 4000000;

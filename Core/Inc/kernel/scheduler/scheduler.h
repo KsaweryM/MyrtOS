@@ -5,23 +5,7 @@
 #include <kernel/mutex.h>
 #include <stdint.h>
 
-typedef struct scheduler scheduler;
-typedef struct scheduler_methods scheduler_methods;
-
-struct scheduler
-{
-  void* scheduler_data;
-  scheduler_methods* scheduler_methods;
-};
-
-struct scheduler_methods
-{
-  void (*scheduler_destroy) (scheduler* scheduler_object);
-  uint32_t (*scheduler_is_context_to_save) (const scheduler* scheduler_object);
-  void (*scheduler_add_thread) (scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
-  uint32_t (*scheduler_choose_next_thread) (scheduler* scheduler_object, uint32_t SP_register);
-  mutex* (*scheduler_create_mutex) (scheduler* scheduler_object);
-};
+typedef struct scheduler_t scheduler_t;
 
 typedef enum SCHEDULER_ALGORITHM
 {
@@ -31,17 +15,9 @@ typedef enum SCHEDULER_ALGORITHM
 	COOPERATIVE_SCHEDULING
 } SCHEDULER_ALGORITHM;
 
-typedef struct scheduler_attributes
-{
-	SCHEDULER_ALGORITHM algorithm;
-} scheduler_attributes;
-
-scheduler* scheduler_create(const scheduler_attributes* scheduler_attributes_object);
-void scheduler_destroy(scheduler* scheduler_object);
-
-uint32_t scheduler_is_context_to_save(const scheduler* scheduler_object);
-uint32_t scheduler_choose_next_thread(scheduler* scheduler_object, uint32_t SP_register);
-void scheduler_add_thread(scheduler* scheduler_object, const thread_attributes* thread_attributes_object);
-mutex* scheduler_create_mutex(scheduler* scheduler_object);
+void scheduler_destroy(scheduler_t* scheduler);
+uint32_t* scheduler_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register);
+void scheduler_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
+mutex_t* scheduler_create_mutex(scheduler_t* scheduler);
 
 #endif

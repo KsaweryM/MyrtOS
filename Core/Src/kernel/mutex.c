@@ -2,42 +2,26 @@
 #include <kernel/mutex.h>
 #include <kernel/atomic.h>
 
-mutex* mutex_create(void)
+mutex_t* mutex_create(void)
 {
-	mutex* mutex_object = 0;
+	mutex_t* mutex = 0;
 
-  CRITICAL_PATH_ENTER();
+  mutex = kernel_create_mutex(kernel_get_instance());
 
-  mutex_object = kernel_create_mutex(kernel_get_instance());
-
-  CRITICAL_PATH_EXIT();
-
-  return mutex_object;
+  return mutex;
 }
 
-void mutex_lock(mutex* mutex_object)
+void mutex_lock(mutex_t* mutex)
 {
-  CRITICAL_PATH_ENTER();
-
-	mutex_object->mutex_lock(mutex_object);
-
-  CRITICAL_PATH_EXIT();
+	mutex->mutex_lock(mutex);
 }
 
-void mutex_unlock(mutex* mutex_object)
+void mutex_unlock(mutex_t* mutex)
 {
-  CRITICAL_PATH_ENTER();
-
-	mutex_object->mutex_unlock(mutex_object);
-
-  CRITICAL_PATH_EXIT();
+	mutex->mutex_unlock(mutex);
 }
 
-void mutex_destroy(mutex* mutex_object)
+void mutex_destroy(mutex_t* mutex)
 {
-  CRITICAL_PATH_ENTER();
-
-	mutex_object->mutex_destroy(mutex_object);
-
-  CRITICAL_PATH_EXIT();
+	mutex->mutex_destroy(mutex);
 }

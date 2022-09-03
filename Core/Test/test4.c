@@ -26,7 +26,7 @@ volatile uint32_t test4_task2_finished = 0;
 
 typedef struct test4_args
 {
-	mutex* mutex_object;
+	mutex_t* mutex_object;
 	uint32_t value_to_deliver;
 	uint32_t* finished;
 } test4_args;
@@ -37,7 +37,7 @@ void test4_task(void* args)
 {
 	test4_args* test4_args_object = (test4_args*) args;
 
-	mutex* mutex_object = test4_args_object->mutex_object;
+	mutex_t* mutex_object = test4_args_object->mutex_object;
 	uint32_t value_to_deliver = test4_args_object->value_to_deliver;
 	uint32_t* finished = test4_args_object->finished;
 
@@ -48,14 +48,14 @@ void test4_task(void* args)
 
 		test4_cm_memory = value_to_deliver;
 
-		thread_yield();
+		yield();
 
 		assert(test4_cm_memory == value_to_deliver);
 
 		test4_cm_memory = 0;
 
 		mutex_unlock(mutex_object);
-		thread_yield();
+		yield();
 	}
 
 	(*finished)++;
@@ -69,7 +69,7 @@ void test4_task2(void* args)
 	for (uint32_t i = 0; i < test4_nr_tasks * TEST4_REPETITIONS; i++)
 	{
 		test4_task2_counter++;
-		thread_yield();
+		yield();
 	}
 
 	test4_task2_finished = 1;
@@ -79,18 +79,13 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST4_REPETITIONS; i++)
 	{
-		kernel_attributes kernel_attributes_object = {
-
+		kernel_attributes_t kernel_attributes_object = {
+				.scheduler_algorithm = scheduler_algorithm
 		};
 
-		scheduler_attributes scheduler_attributes_object = {
-			.algorithm = scheduler_algorithm
-		};
+		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
 
-
-		kernel* kernel_object = kernel_create(&kernel_attributes_object, &scheduler_attributes_object);
-
-		mutex* mutex_object = mutex_create();
+		mutex_t* mutex_object = mutex_create();
 
 		test4_nr_tasks = rand() % 10 + 1;
 
@@ -106,7 +101,7 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 			finished[j] = 0;
 		}
 
-		thread_attributes* threads_attributes = malloc(sizeof(*threads_attributes) * test4_nr_tasks);
+		thread_attributes_t* threads_attributes = malloc(sizeof(*threads_attributes) * test4_nr_tasks);
 
 		for (uint32_t j = 0; j < test4_nr_tasks; j++)
 		{
@@ -118,7 +113,7 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 			kernel_add_thread(kernel_object, &threads_attributes[j]);
 		}
 
-		thread_attributes thread2_attributes = {
+		thread_attributes_t thread2_attributes = {
 				.function = test4_task2,
 				.function_arguments = 0,
 				.stack_size = 1000,

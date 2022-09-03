@@ -1,20 +1,20 @@
 #ifndef __MUTEX_H
 #define __MUTEX_H
 
-typedef struct mutex mutex;
+typedef struct mutex_t mutex_t;
 
-struct mutex
+struct mutex_t
 {
 	void* mutex_data;
 
-	void (*mutex_lock)(mutex* mutex_object);
-	void (*mutex_unlock)(mutex* mutex_object);
-	void (*mutex_destroy)(mutex* mutex_object);
+	void (*mutex_lock)(mutex_t* mutex);
+	void (*mutex_unlock)(mutex_t* mutex);
+	void (*mutex_destroy)(mutex_t* mutex);
 };
 
-mutex* mutex_create(void);
-void mutex_lock(mutex* mutex_object);
-void mutex_unlock(mutex* mutex_object);
-void mutex_destroy(mutex* mutex_object);
+mutex_t* mutex_create(void);
+void mutex_lock(mutex_t* mutex);
+void mutex_unlock(mutex_t* mutex);
+void mutex_destroy(mutex_t* mutex);
 
 #endif

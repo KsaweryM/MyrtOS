@@ -7,26 +7,22 @@
 #include <stdint.h>
 #include <stm32l4xx.h>
 
+typedef struct kernel_t kernel_t;
 
-typedef struct kernel kernel;
-
-typedef struct kernel_attributes
+typedef struct kernel_attributes_t
 {
+	SCHEDULER_ALGORITHM scheduler_algorithm;
+} kernel_attributes_t;
 
-} kernel_attributes;
+kernel_t* kernel_get_instance(void);
+kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes);
+void kernel_destroy(kernel_t* kernel);
 
-kernel* kernel_create(const kernel_attributes* kernel_attributes_object, const scheduler_attributes* scheduler_attributes_object);
-kernel* kernel_get_instance(void);
-void kernel_destroy(kernel* kernel_object);
+void kernel_launch(const kernel_t* kernel);
 
-void kernel_launch(const kernel* kernel_object);
-void kernel_suspend(const kernel* kernel_object);
-void kernel_resume(const kernel* kernel_object);
+void kernel_add_thread(kernel_t* kernel, const thread_attributes_t* thread_attributes);
+mutex_t* kernel_create_mutex(kernel_t* kernel);
 
-void kernel_add_thread(kernel* kernel_object, const thread_attributes* thread_attributes_object);
-mutex* kernel_create_mutex(kernel* kernel_object);
-
-void thread_delay(uint32_t seconds);
-void thread_yield(void);
+void yield(void);
 
 #endif
