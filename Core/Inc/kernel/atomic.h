@@ -6,6 +6,9 @@
 
 extern volatile int32_t critical_path_depth;
 
+#define INTCTRL			(*((volatile uint32_t *)0xE000ED04))
+#define PENDSTET		(1U << 26)
+
 #define CRITICAL_PATH_ENTER()       \
   do                                \
   {                                 \
@@ -13,15 +16,29 @@ extern volatile int32_t critical_path_depth;
     critical_path_depth++;          \
   } while (0);
 
-#define CRITICAL_PATH_EXIT()       \
-  do                               \
-  {                                \
-    critical_path_depth--;         \
-    if (critical_path_depth == 0)  \
-    {                              \
-      __enable_irq();              \
-    }                              \
+#define CRITICAL_PATH_EXIT()        \
+  do                                \
+  {                                 \
+    critical_path_depth--;          \
+    if (critical_path_depth == 0)   \
+    {                               \
+      __enable_irq();               \
+    }                               \
   } while (0);
+
+#define YIELD()											\
+	do																\
+	{																	\
+		assert(!critical_path_depth); 	\
+																		\
+		__disable_irq();								\
+		SysTick->VAL = 0;								\
+																		\
+		INTCTRL = PENDSTET;							\
+		__enable_irq();									\
+																		\
+		while (INTCTRL & PENDSTET);			\
+	} while (0);
 
 
 #define ATOMIC_SET(VARIABLE, VALUE) \

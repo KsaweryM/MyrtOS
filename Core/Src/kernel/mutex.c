@@ -1,6 +1,7 @@
 #include <kernel/kernel.h>
 #include <kernel/mutex.h>
 #include <kernel/atomic.h>
+#include <kernel/mutex_p.h>
 
 mutex_t* mutex_create(void)
 {

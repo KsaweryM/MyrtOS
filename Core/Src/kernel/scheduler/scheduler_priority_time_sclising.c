@@ -1,3 +1,4 @@
+#include <kernel/mutex_p.h>
 #include <kernel/scheduler/scheduler_p.h>
 #include <kernel/scheduler/scheduler_priority_time_slicing.h>
 #include "kernel/list.h"
@@ -28,13 +29,6 @@ struct scheduler_priority_time_slicing_t
 	mutex_t* current_mutex;
 	SCHEDULER_PRIORITY_TIME_SLICING_STATE state;
 };
-
-typedef struct mutex_priority_time_slicing_data
-{
-	list_t* suspended_threads;
-	iterator_t* suspended_threads_iterator;
-	uint32_t is_locked;
-} mutex_priority_time_slicing_data;
 
 scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_g = 0;
 
@@ -187,8 +181,7 @@ uint32_t* __scheduler_priority_time_slicing_choose_next_thread(scheduler_t* sche
 		thread_control_block_t* suspended_thread = (thread_control_block_t*) cyclic_iterator_pop(scheduler_priority_time_slicing->threads_iterators[thread_priority]);
 		thread_control_block_set_stack_pointer(suspended_thread, SP_register);
 
-		mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) scheduler_priority_time_slicing->current_mutex->mutex_data;
-		list_push_back(mutex_data->suspended_threads, suspended_thread);
+		list_push_back(scheduler_priority_time_slicing->current_mutex->suspended_threads, suspended_thread);
 
 		scheduler_priority_time_slicing->current_mutex = 0;
 
@@ -230,7 +223,7 @@ static void __scheduler_priority_time_slicing_deactivate_current_thread(void)
 
 	scheduler_priority_time_slicing_g->state = DEACTIVATE_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 
-	yield();
+	YIELD();
 }
 
 static void __scheduler_priority_time_slicing_destroy_deactivated_threads(scheduler_t* scheduler)
@@ -264,13 +257,9 @@ mutex_t* __scheduler_priority_time_slicing_create_mutex(scheduler_t* scheduler)
 {
 	mutex_t* mutex = malloc(sizeof(*mutex));
 
-	mutex_priority_time_slicing_data* mutex_data = malloc(sizeof(*mutex_data));
-
-	mutex_data->suspended_threads = list_create();
-	mutex_data->suspended_threads_iterator = iterator_create(mutex_data->suspended_threads);
-	mutex_data->is_locked = 0;
-
-	mutex->mutex_data = mutex_data;
+	mutex->suspended_threads = list_create();
+	mutex->suspended_threads_iterator = iterator_create(mutex->suspended_threads);
+	mutex->is_locked = 0;
 
 	mutex->mutex_lock = __mutex_priority_time_slicing_lock;
 	mutex->mutex_unlock = __mutex_priority_time_slicing_unlock;
@@ -281,35 +270,31 @@ mutex_t* __scheduler_priority_time_slicing_create_mutex(scheduler_t* scheduler)
 
 static void __mutex_priority_time_slicing_lock(mutex_t* mutex)
 {
-	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex->mutex_data;
+	mutex->is_locked++;
 
-	mutex_data->is_locked++;
-
-	if (mutex_data->is_locked >= 2)
+	if (mutex->is_locked >= 2)
 	{
 		// TODO: add pointer to scheduler in mutex class
 		scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = scheduler_priority_time_slicing_g;
 		scheduler_priority_time_slicing->state = SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 		scheduler_priority_time_slicing->current_mutex = mutex;
 
-		yield();
+		YIELD();
 	}
 }
 
 static void __mutex_priority_time_slicing_unlock(mutex_t* mutex)
 {
-	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex->mutex_data;
+	assert(mutex->is_locked);
 
-	assert(mutex_data->is_locked);
-
-	if (mutex_data->is_locked)
+	if (mutex->is_locked)
 	{
-		mutex_data->is_locked--;
+		mutex->is_locked--;
 
-		if (!list_is_empty(mutex_data->suspended_threads))
+		if (!list_is_empty(mutex->suspended_threads))
 		{
-			iterator_reset(mutex_data->suspended_threads_iterator);
-			thread_control_block_t* resumed_thread = cyclic_iterator_pop(mutex_data->suspended_threads_iterator);
+			iterator_reset(mutex->suspended_threads_iterator);
+			thread_control_block_t* resumed_thread = cyclic_iterator_pop(mutex->suspended_threads_iterator);
 			// TODO: add pointer to scheduler in mutex class
 			scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = scheduler_priority_time_slicing_g;
 
@@ -321,12 +306,9 @@ static void __mutex_priority_time_slicing_unlock(mutex_t* mutex)
 
 static void __mutex_priority_time_slicing_destroy(mutex_t* mutex)
 {
-	mutex_priority_time_slicing_data* mutex_data = (mutex_priority_time_slicing_data*) mutex->mutex_data;
+	assert(list_is_empty(mutex->suspended_threads));
+	list_destroy(mutex->suspended_threads);
+	iterator_destroy(mutex->suspended_threads_iterator);
 
-	assert(list_is_empty(mutex_data->suspended_threads));
-	list_destroy(mutex_data->suspended_threads);
-	iterator_destroy(mutex_data->suspended_threads_iterator);
-
-	free(mutex->mutex_data);
 	free(mutex);
 }

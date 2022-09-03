@@ -38,7 +38,7 @@ void test3_task0(void* args)
 		assert(test3_task0_counter == test3_task2_counter + 1);
 		assert(test3_task0_counter == test3_task3_counter + 1);
 
-		yield();
+		YIELD();
 	}
 
 	test3_task0_finished++;
@@ -53,7 +53,7 @@ void test3_task1(void* args)
 		assert(test3_task1_counter == test3_task2_counter + 1);
 		assert(test3_task1_counter == test3_task3_counter + 1);
 
-		yield();
+		YIELD();
 	}
 
 	test3_task1_finished++;
@@ -68,7 +68,7 @@ void test3_task2(void* args)
 		assert(test3_task2_counter == test3_task1_counter);
 		assert(test3_task2_counter == test3_task3_counter + 1);
 
-		yield();
+		YIELD();
 	}
 
 	test3_task2_finished++;
@@ -83,7 +83,7 @@ void test3_task3(void* args)
 		assert(test3_task3_counter == test3_task1_counter);
 		assert(test3_task3_counter == test3_task2_counter);
 
-		yield();
+		YIELD();
 	}
 
 	test3_task3_finished++;

@@ -74,7 +74,7 @@ void test1_task1(void* args)
 		assert(task1_counter == i + 1);
 		assert(task2_counter == 0);
 
-		yield();
+		YIELD();
 	}
 
 	assert(task1_counter == TEST1_END_VALUE);
@@ -100,7 +100,7 @@ void test1_task2(void* args)
 		assert(task1_counter == TEST1_END_VALUE);
 		assert(task2_counter == i + 1);
 
-		yield();
+		YIELD();
 	}
 
 	assert(task2_counter == TEST1_END_VALUE);
@@ -116,7 +116,7 @@ void test1_task3(void* args)
 
 	for (uint32_t i = 0; i < 10 * TEST1_END_VALUE; i++)
 	{
-		yield();
+		YIELD();
 	}
 
 	(*task3_args_object->end) = 1;

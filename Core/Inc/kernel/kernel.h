@@ -23,6 +23,4 @@ void kernel_launch(const kernel_t* kernel);
 void kernel_add_thread(kernel_t* kernel, const thread_attributes_t* thread_attributes);
 mutex_t* kernel_create_mutex(kernel_t* kernel);
 
-void yield(void);
-
 #endif

@@ -6,8 +6,6 @@
 #include <kernel/scheduler/scheduler_priority_time_slicing.h>
 #include <assert.h>
 
-#define INTCTRL			(*((volatile uint32_t *)0xE000ED04))
-#define PENDSTET		(1U << 26)
 #define CLKSOURCE		(1U << 2)
 #define TICKINT			(1U << 1)
 #define ENABLE			(1U << 0)
@@ -87,7 +85,7 @@ void kernel_launch(const kernel_t* kernel)
 
   __system_timer_initialize(CPU_frequency);
 
-  yield();
+  YIELD();
 }
 
 void kernel_add_thread(kernel_t* kernel, const thread_attributes_t* thread_attributes)
@@ -110,17 +108,6 @@ mutex_t* kernel_create_mutex(kernel_t* kernel)
   CRITICAL_PATH_EXIT();
 
   return mutex;
-}
-
-void yield(void)
-{
-  __disable_irq();
-  SysTick->VAL = 0;
-
-  INTCTRL = PENDSTET;
-  __enable_irq();
-
-  while (INTCTRL & PENDSTET);
 }
 
 __attribute__((naked)) void SysTick_Handler(void)

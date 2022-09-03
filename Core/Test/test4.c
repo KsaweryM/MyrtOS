@@ -48,14 +48,14 @@ void test4_task(void* args)
 
 		test4_cm_memory = value_to_deliver;
 
-		yield();
+		YIELD();
 
 		assert(test4_cm_memory == value_to_deliver);
 
 		test4_cm_memory = 0;
 
 		mutex_unlock(mutex_object);
-		yield();
+		YIELD();
 	}
 
 	(*finished)++;
@@ -69,7 +69,7 @@ void test4_task2(void* args)
 	for (uint32_t i = 0; i < test4_nr_tasks * TEST4_REPETITIONS; i++)
 	{
 		test4_task2_counter++;
-		yield();
+		YIELD();
 	}
 
 	test4_task2_finished = 1;

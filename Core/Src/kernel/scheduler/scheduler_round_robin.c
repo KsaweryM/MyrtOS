@@ -1,8 +1,9 @@
 #include <kernel/scheduler/scheduler_p.h>
-#include "kernel/scheduler/scheduler_round_robin.h"
-#include "kernel/list.h"
-#include "kernel/atomic.h"
-#include "kernel/kernel.h"
+#include <kernel/mutex_p.h>
+#include <kernel/scheduler/scheduler_round_robin.h>
+#include <kernel/list.h>
+#include <kernel/atomic.h>
+#include <kernel/kernel.h>
 #include <stdlib.h>
 
 typedef enum SCHEDULER_ROUND_ROBIN_STATE
@@ -26,13 +27,6 @@ struct scheduler_round_robin_t
 	mutex_t* current_mutex;
 	SCHEDULER_ROUND_ROBIN_STATE state;
 };
-
-typedef struct mutex_round_robin_data
-{
-	list_t* suspended_threads;
-	iterator_t* suspended_threads_iterator;
-	uint32_t is_locked;
-} mutex_round_robin_data;
 
 scheduler_round_robin_t* scheduler_round_robin_g = 0;
 
@@ -153,8 +147,7 @@ uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uin
 		thread_control_block_t* suspended_thread = (thread_control_block_t*) cyclic_iterator_pop(scheduler_round_robin->threads_iterator);
 		thread_control_block_set_stack_pointer(suspended_thread, SP_register);
 
-		mutex_round_robin_data* mutex_data = (mutex_round_robin_data*) scheduler_round_robin->current_mutex->mutex_data;
-		list_push_back(mutex_data->suspended_threads, suspended_thread);
+		list_push_back(scheduler_round_robin->current_mutex->suspended_threads, suspended_thread);
 
 		scheduler_round_robin->current_mutex = 0;
 
@@ -184,7 +177,7 @@ static void __scheduler_round_robin_deactivate_current_thread(void)
 
 	scheduler_round_robin_g->state = DEACTIVATE_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 
-	yield();
+	YIELD();
 }
 
 static void __scheduler_round_robin_destroy_deactivated_threads(scheduler_t* scheduler)
@@ -212,13 +205,9 @@ mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler)
 {
 	mutex_t* mutex = malloc(sizeof(*mutex));
 
-	mutex_round_robin_data* mutex_data = malloc(sizeof(*mutex_data));
-
-	mutex_data->suspended_threads = list_create();
-	mutex_data->suspended_threads_iterator = iterator_create(mutex_data->suspended_threads);
-	mutex_data->is_locked = 0;
-
-	mutex->mutex_data = mutex_data;
+	mutex->suspended_threads = list_create();
+	mutex->suspended_threads_iterator = iterator_create(mutex->suspended_threads);
+	mutex->is_locked = 0;
 
 	mutex->mutex_lock = __mutex_round_robin_lock;
 	mutex->mutex_unlock = __mutex_round_robin_unlock;
@@ -229,38 +218,30 @@ mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler)
 
 static void __mutex_round_robin_lock(mutex_t* mutex)
 {
-	CRITICAL_PATH_ENTER();
+	mutex->is_locked++;
 
-	mutex_round_robin_data* mutex_data = (mutex_round_robin_data*) mutex->mutex_data;
-
-	mutex_data->is_locked++;
-
-	if (mutex_data->is_locked >= 2)
+	if (mutex->is_locked >= 2)
 	{
 		scheduler_round_robin_t* scheduler = (scheduler_round_robin_t*) scheduler_round_robin_g;
 		scheduler->state = SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 		scheduler->current_mutex = mutex;
 
-		yield();
+		YIELD();
 	}
-
-	CRITICAL_PATH_EXIT();
 }
 
 static void __mutex_round_robin_unlock(mutex_t* mutex)
 {
-	mutex_round_robin_data* mutex_data = (mutex_round_robin_data*) mutex->mutex_data;
+	assert(mutex->is_locked);
 
-	assert(mutex_data->is_locked);
-
-	if (mutex_data->is_locked)
+	if (mutex->is_locked)
 	{
-		mutex_data->is_locked--;
+		mutex->is_locked--;
 
-		if (!list_is_empty(mutex_data->suspended_threads))
+		if (!list_is_empty(mutex->suspended_threads))
 		{
-			iterator_reset(mutex_data->suspended_threads_iterator);
-			thread_control_block_t* resumed_thread = cyclic_iterator_pop(mutex_data->suspended_threads_iterator);
+			iterator_reset(mutex->suspended_threads_iterator);
+			thread_control_block_t* resumed_thread = cyclic_iterator_pop(mutex->suspended_threads_iterator);
 			scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler_round_robin_g;
 			list_push_back(scheduler_round_robin->threads_list, resumed_thread);
 		}
@@ -269,13 +250,10 @@ static void __mutex_round_robin_unlock(mutex_t* mutex)
 
 static void __mutex_round_robin_destroy(mutex_t* mutex)
 {
-	mutex_round_robin_data* mutex_data = (mutex_round_robin_data*) mutex->mutex_data;
+	assert(list_is_empty(mutex->suspended_threads));
+	list_destroy(mutex->suspended_threads);
+	iterator_destroy(mutex->suspended_threads_iterator);
 
-	assert(list_is_empty(mutex_data->suspended_threads));
-	list_destroy(mutex_data->suspended_threads);
-	iterator_destroy(mutex_data->suspended_threads_iterator);
-
-	free(mutex->mutex_data);
 	free(mutex);
 }
 
