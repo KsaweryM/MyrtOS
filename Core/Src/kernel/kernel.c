@@ -49,7 +49,7 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
   	break;
   }
 
-	assert(kernel_g->scheduler);
+  assert(kernel_g->scheduler);
 
   CRITICAL_PATH_EXIT();
 

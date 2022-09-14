@@ -46,15 +46,6 @@ typedef struct task3_args
 	uint32_t* common;
 } task3_args;
 
-
-void test1_task0(void* args)
-{
-	mutex_t* mutex_object = mutex_create();
-	mutex_destroy(mutex_object);
-
-	*((uint32_t*) args) = 1;
-}
-
 void test1_task1(void* args)
 {
 	CRITICAL_PATH_ENTER();
@@ -129,38 +120,19 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	for (uint32_t i = 0; i < TEST1_REPETITIONS; i++)
 	{
-		uint32_t end = 0;
-		thread_attributes_t task0_attributes = {
-			.thread_name = "task0",
-			.function = test1_task0,
-			.function_arguments = (void*)&end,
-			.stack_size = 1000,
-			.thread_priority = 0
-		};
-
-		kernel_attributes_t kernel_attributes_object = {
-				.scheduler_algorithm = scheduler_algorithm
-		};
-
-		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
-
-		kernel_add_thread(kernel_object, &task0_attributes);
-		kernel_launch(kernel_object);
-
-		while (!end);
-
-		kernel_destroy(kernel_object);
-		// mutex constructor and destructor work properly
-
 		task1_counter = 0;
 		task2_counter = 0;
 
-		kernel_object = kernel_create(&kernel_attributes_object);
+		kernel_attributes_t kernel_attributes_object = {
+						.scheduler_algorithm = scheduler_algorithm
+				};
+
+		kernel_t* kernel_object = kernel_create(&kernel_attributes_object);
 
 		mutex_t* mutex_object = mutex_create();
 		uint32_t counter = 0;
 		uint32_t common = 0;
-		end = 0;
+		uint32_t end = 0;
 
 		task1_args task1_args_object = {
 				.counter = &counter,
