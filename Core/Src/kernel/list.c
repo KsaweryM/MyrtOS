@@ -41,8 +41,7 @@ int32_t list_destroy(list_t* list)
   return 0;
 }
 
-
-void list_push_front(list_t* list, void* data)
+list_item_t* __list_item_create(void* data)
 {
   list_item_t* list_item = malloc(sizeof(*list_item));
 
@@ -50,6 +49,12 @@ void list_push_front(list_t* list, void* data)
   list_item->next = 0;
   list_item->data = data;
 
+  return list_item;
+}
+
+void list_push_front(list_t* list, void* data)
+{
+  list_item_t* list_item = __list_item_create(data);
 
   if (list->list_begin == 0)
   {
@@ -67,7 +72,7 @@ void list_push_front(list_t* list, void* data)
 
 void list_push_back(list_t* list, void* data)
 {
-  list_item_t* list_item = malloc(sizeof(*list_item));
+  list_item_t* list_item = __list_item_create(data);
 
   list_item->previous = 0;
   list_item->next = 0;
@@ -133,6 +138,11 @@ void* iterator_pop(iterator_t* iterator)
     previous_list_item->next = next_list_item;
     next_list_item->previous = previous_list_item;
   }
+  else if (previous_list_item == 0 && next_list_item == 0)
+  {
+    iterator->iterator_owner->list_begin = 0;
+    iterator->iterator_owner->list_end = 0;
+  }
   else if (previous_list_item == 0)
   {
     next_list_item->previous = 0;
@@ -142,11 +152,6 @@ void* iterator_pop(iterator_t* iterator)
   {
     previous_list_item->next = 0;
     iterator->iterator_owner->list_end = previous_list_item;
-  }
-  else
-  {
-    iterator->iterator_owner->list_begin = 0;
-    iterator->iterator_owner->list_end = 0;
   }
 
   void* data = current_list_item->data;
@@ -182,6 +187,28 @@ uint32_t iterator_previous(iterator_t* iterator)
   }
 
   return iterator->current_list_item == 0;
+}
+
+void iterator_push_previous(iterator_t* iterator, void* data)
+{
+	list_item_t* current_item = iterator->current_list_item;
+
+	if (current_item == 0 || current_item == iterator->iterator_owner->list_begin)
+	{
+		list_push_front(iterator->iterator_owner, data);
+	}
+	else
+	{
+		list_item_t* previous_item = current_item->previous;
+
+		list_item_t* list_item = __list_item_create(data);
+
+		previous_item->next = list_item;
+		list_item->previous = previous_item;
+
+		list_item->next = current_item;
+		current_item->previous = list_item;
+	}
 }
 
 void* cyclic_iterator_pop(iterator_t* iterator)

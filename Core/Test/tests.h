@@ -11,5 +11,6 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm);
 uint32_t test2(SCHEDULER_ALGORITHM scheduler_algorithm);
 uint32_t test3(SCHEDULER_ALGORITHM scheduler_algorithm);
 uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm);
-
+uint32_t test5(SCHEDULER_ALGORITHM scheduler_algorithm);
+uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm);
 #endif

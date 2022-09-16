@@ -83,12 +83,13 @@ int main(void)
   /* Initialize all configured peripherals */
   /* USER CODE BEGIN 2 */
 
-  test0(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // basic test
-  test1(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // mutex test
-  test2(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // thread yield test
-  test3(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // thread yield test 2
-  test4(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // mutex test2
-
+  //test0(ROUND_ROBIN_SCHEDULING); // basic test
+  //test1(ROUND_ROBIN_SCHEDULING); // mutex test
+  //test2(ROUND_ROBIN_SCHEDULING); // thread yield test
+  //test3(ROUND_ROBIN_SCHEDULING); // thread yield test 2
+  //test4(ROUND_ROBIN_SCHEDULING); // mutex test2
+  //test5(ROUND_ROBIN_SCHEDULING); // delay 1
+  test6(ROUND_ROBIN_SCHEDULING); // delay 2
   /* USER CODE END 2 */
 
   /* Infinite loop */

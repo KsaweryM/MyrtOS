@@ -29,6 +29,7 @@ void iterator_reset(iterator_t* iterator);
 
 uint32_t iterator_next(iterator_t* iterator);
 uint32_t iterator_previous(iterator_t* iterator);
+void iterator_push_previous(iterator_t* iterator, void* data);
 
 void* cyclic_iterator_pop(iterator_t* iterator);
 uint32_t cyclic_iterator_next(iterator_t* iterator);

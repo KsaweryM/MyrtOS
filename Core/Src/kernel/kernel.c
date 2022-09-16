@@ -11,8 +11,8 @@
 #define ENABLE			(1U << 0)
 
 static void __system_timer_initialize(uint32_t CPU_frequency);
-static uint32_t __get_CPU_frequency();
 static uint32_t* __choose_next_thread(uint32_t* SP_register);
+static void __kernel_block_thread(kernel_t* kernel, uint32_t seconds);
 
 struct kernel_t
 {
@@ -81,7 +81,7 @@ void kernel_destroy(kernel_t* kernel)
 
 void kernel_launch(const kernel_t* kernel)
 {
-  uint32_t CPU_frequency = __get_CPU_frequency();
+  uint32_t CPU_frequency = get_CPU_frequency();
 
   __system_timer_initialize(CPU_frequency);
 
@@ -108,6 +108,11 @@ mutex_t* kernel_create_mutex(kernel_t* kernel)
   CRITICAL_PATH_EXIT();
 
   return mutex;
+}
+
+void __kernel_block_thread(kernel_t* kernel, uint32_t milliseconds)
+{
+	scheduler_block_thread(kernel->scheduler, milliseconds);
 }
 
 __attribute__((naked)) void SysTick_Handler(void)
@@ -209,7 +214,13 @@ static void __system_timer_initialize(uint32_t CPU_frequency)
   SysTick->CTRL |= ENABLE;
 }
 
-static uint32_t __get_CPU_frequency()
+void delay(uint32_t milliseconds)
+{
+	assert(kernel_g);
+	__kernel_block_thread(kernel_g, milliseconds);
+}
+
+uint32_t get_CPU_frequency()
 {
   // TODO: get current CPU clock frequency
   return 4000000;

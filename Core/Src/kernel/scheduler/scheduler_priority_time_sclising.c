@@ -21,7 +21,6 @@ struct scheduler_priority_time_slicing_t
 {
 	scheduler_t scheduler;
 	list_t** threads_lists;
-	list_t* blocked_threads;
 	list_t* deactivated_threads;
 	iterator_t** threads_iterators;
 	uint32_t* main_thread_SP_register;
@@ -57,7 +56,6 @@ scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_create()
 		scheduler_priority_time_slicing_g->scheduler.scheduler_create_mutex = __scheduler_priority_time_slicing_create_mutex;
 
 		scheduler_priority_time_slicing_g->threads_lists = malloc(sizeof(*scheduler_priority_time_slicing_g->threads_lists) * NUMBER_PRIORITIES);
-		scheduler_priority_time_slicing_g->blocked_threads = list_create();
 		scheduler_priority_time_slicing_g->deactivated_threads = list_create();
 		scheduler_priority_time_slicing_g->threads_iterators = malloc(sizeof(*scheduler_priority_time_slicing_g->threads_iterators) * NUMBER_PRIORITIES);
 		scheduler_priority_time_slicing_g->main_thread_SP_register = 0;
@@ -79,9 +77,6 @@ scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_create()
 void __scheduler_priority_time_slicing_destroy(scheduler_t* scheduler)
 {
 	scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = (scheduler_priority_time_slicing_t*) scheduler;
-
-	__scheduler_priority_time_slicing_destroy_list_content(scheduler_priority_time_slicing->blocked_threads);
-	list_destroy(scheduler_priority_time_slicing->blocked_threads);
 
 	__scheduler_priority_time_slicing_destroy_list_content(scheduler_priority_time_slicing->deactivated_threads);
 	list_destroy(scheduler_priority_time_slicing->deactivated_threads);
@@ -224,6 +219,8 @@ static void __scheduler_priority_time_slicing_deactivate_current_thread(void)
 	scheduler_priority_time_slicing_g->state = DEACTIVATE_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 
 	YIELD();
+
+	assert(0);
 }
 
 static void __scheduler_priority_time_slicing_destroy_deactivated_threads(scheduler_t* scheduler)
