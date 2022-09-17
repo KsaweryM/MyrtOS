@@ -13,7 +13,7 @@
 #define TEST6_REPETITIONS GLOBAL_TEST_REPETITIONS
 #endif
 
-#define TEST6_I 100
+#define TEST6_I 10
 
 
 volatile uint32_t test6_basic_counter0 = 0;
@@ -89,10 +89,10 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 		test6_basic_counter3 = 0;
 		test6_basic_counter4 = 0;
 
-		uint32_t delay0 = 99;
-		uint32_t delay1 = rand() % 100 + 1;
-		uint32_t delay2 = rand() % 100 + 1;
-		uint32_t delay3 = rand() % 100 + 1;
+		uint32_t delay0 = 1000;
+		uint32_t delay1 = 3000;
+		uint32_t delay2 = 4000;
+		uint32_t delay3 = 4000;
 
 		thread_attributes_t thread_basic0 = {
 					.function = test6_basic0,

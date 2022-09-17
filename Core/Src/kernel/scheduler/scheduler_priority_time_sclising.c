@@ -1,9 +1,10 @@
 #include <kernel/mutex_p.h>
 #include <kernel/scheduler/scheduler_p.h>
 #include <kernel/scheduler/scheduler_priority_time_slicing.h>
-#include "kernel/list.h"
-#include "kernel/atomic.h"
-#include "kernel/kernel.h"
+#include <kernel/list.h>
+#include <kernel/atomic.h>
+#include <kernel/kernel.h>
+#include <kernel/blocker.h>
 #include <stdlib.h>
 
 #define NUMBER_PRIORITIES 16
@@ -14,6 +15,7 @@ typedef enum SCHEDULER_PRIORITY_TIME_SLICING_STATE
 	SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD,
 	DEACTIVATE_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD,
 	SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD,
+	BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD,
 	NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD
 } SCHEDULER_PRIORITY_TIME_SLICING_STATE;
 
@@ -26,6 +28,7 @@ struct scheduler_priority_time_slicing_t
 	uint32_t* main_thread_SP_register;
 	thread_control_block_t* current_thread;
 	mutex_t* current_mutex;
+	blocker_t* blocker;
 	SCHEDULER_PRIORITY_TIME_SLICING_STATE state;
 };
 
@@ -34,11 +37,13 @@ scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_g = 0;
 static void __scheduler_priority_time_slicing_destroy(scheduler_t* scheduler);
 static uint32_t* __scheduler_priority_time_slicing_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register);
 static void __scheduler_priority_time_slicing_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
+static void __scheduler_priority_time_slicing_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block);
 static mutex_t* __scheduler_priority_time_slicing_create_mutex(scheduler_t* scheduler);
 
 static void __scheduler_priority_time_slicing_deactivate_current_thread(void);
 static void __scheduler_priority_time_slicing_destroy_deactivated_threads(scheduler_t* scheduler);
 static void __scheduler_priority_time_slicing_destroy_list_content(list_t* list);
+static void __scheduler_priority_time_slicing_block_thread(scheduler_t* scheduler, uint32_t delay);
 
 static void __mutex_priority_time_slicing_lock(mutex_t* mutex);
 static void __mutex_priority_time_slicing_unlock(mutex_t* mutex);
@@ -52,8 +57,10 @@ scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_create()
 
 		scheduler_priority_time_slicing_g->scheduler.scheduler_destroy = __scheduler_priority_time_slicing_destroy;
 		scheduler_priority_time_slicing_g->scheduler.scheduler_add_thread = __scheduler_priority_time_slicing_add_thread;
+		scheduler_priority_time_slicing_g->scheduler.scheduler_add_thread_control_block = __scheduler_priority_time_slicing_add_thread_control_block;
 		scheduler_priority_time_slicing_g->scheduler.scheduler_choose_next_thread = __scheduler_priority_time_slicing_choose_next_thread;
 		scheduler_priority_time_slicing_g->scheduler.scheduler_create_mutex = __scheduler_priority_time_slicing_create_mutex;
+		scheduler_priority_time_slicing_g->scheduler.scheduler_block_thread = __scheduler_priority_time_slicing_block_thread;
 
 		scheduler_priority_time_slicing_g->threads_lists = malloc(sizeof(*scheduler_priority_time_slicing_g->threads_lists) * NUMBER_PRIORITIES);
 		scheduler_priority_time_slicing_g->deactivated_threads = list_create();
@@ -61,6 +68,7 @@ scheduler_priority_time_slicing_t* scheduler_priority_time_slicing_create()
 		scheduler_priority_time_slicing_g->main_thread_SP_register = 0;
 		scheduler_priority_time_slicing_g->current_thread = 0;
 		scheduler_priority_time_slicing_g->current_mutex = 0;
+		scheduler_priority_time_slicing_g->blocker = blocker_create((scheduler_t*) scheduler_priority_time_slicing_g);
 
 		scheduler_priority_time_slicing_g->state = SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
 
@@ -93,6 +101,7 @@ void __scheduler_priority_time_slicing_destroy(scheduler_t* scheduler)
 	free(scheduler_priority_time_slicing->threads_iterators);
 
 	thread_control_block_destroy(scheduler_priority_time_slicing->current_thread);
+	blocker_destroy(scheduler_priority_time_slicing->blocker);
 
 	free(scheduler_priority_time_slicing);
 
@@ -104,6 +113,13 @@ void __scheduler_priority_time_slicing_add_thread(scheduler_t* scheduler, const 
 	thread_control_block_t* thread_control_block = thread_control_block_create(thread_attributes, __scheduler_priority_time_slicing_deactivate_current_thread);
 	scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = (scheduler_priority_time_slicing_t*) scheduler;
 	list_push_back(scheduler_priority_time_slicing->threads_lists[thread_attributes->thread_priority], thread_control_block);
+}
+
+void __scheduler_priority_time_slicing_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block)
+{
+	scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = (scheduler_priority_time_slicing_t*) scheduler;
+	uint32_t thread_priority = thread_control_block_get_priority(thread_control_block);
+	list_push_back(scheduler_priority_time_slicing->threads_lists[thread_priority], thread_control_block);
 }
 
 uint32_t* __scheduler_priority_time_slicing_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register)
@@ -179,6 +195,29 @@ uint32_t* __scheduler_priority_time_slicing_choose_next_thread(scheduler_t* sche
 		list_push_back(scheduler_priority_time_slicing->current_mutex->suspended_threads, suspended_thread);
 
 		scheduler_priority_time_slicing->current_mutex = 0;
+
+		int32_t iterator_index = NUMBER_PRIORITIES - 1;
+
+		do
+		{
+			iterator_t* iterator = scheduler_priority_time_slicing->threads_iterators[iterator_index];
+
+			cyclic_iterator_next(iterator);
+			scheduler_priority_time_slicing->current_thread = (thread_control_block_t*)iterator_get_data(iterator);
+			iterator_index--;
+
+		} while (scheduler_priority_time_slicing->current_thread == 0 && iterator_index >= 0);
+
+		scheduler_priority_time_slicing->state = (scheduler_priority_time_slicing->current_thread == 0) ?
+				NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD : SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
+	}
+	else if (scheduler_priority_time_slicing->state == BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD)
+	{
+		uint32_t thread_priority = thread_control_block_get_priority(scheduler_priority_time_slicing->current_thread);
+		thread_control_block_t* blocked_thread = (thread_control_block_t*) cyclic_iterator_pop(scheduler_priority_time_slicing->threads_iterators[thread_priority]);
+		thread_control_block_set_stack_pointer(blocked_thread, SP_register);
+
+		blocker_block_thread(scheduler_priority_time_slicing->blocker, blocked_thread);
 
 		int32_t iterator_index = NUMBER_PRIORITIES - 1;
 
@@ -308,4 +347,17 @@ static void __mutex_priority_time_slicing_destroy(mutex_t* mutex)
 	iterator_destroy(mutex->suspended_threads_iterator);
 
 	free(mutex);
+}
+
+void  __scheduler_priority_time_slicing_block_thread(scheduler_t* scheduler, uint32_t delay)
+{
+	CRITICAL_PATH_ENTER();
+
+	scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = (scheduler_priority_time_slicing_t*) scheduler;
+	thread_control_block_set_delay(scheduler_priority_time_slicing->current_thread, delay);
+	scheduler_priority_time_slicing->state = BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
+
+	CRITICAL_PATH_EXIT();
+
+	YIELD();
 }

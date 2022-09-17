@@ -89,7 +89,7 @@ int main(void)
   //test3(ROUND_ROBIN_SCHEDULING); // thread yield test 2
   //test4(ROUND_ROBIN_SCHEDULING); // mutex test2
   //test5(ROUND_ROBIN_SCHEDULING); // delay 1
-  test6(ROUND_ROBIN_SCHEDULING); // delay 2
+  test6(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // delay 2
   /* USER CODE END 2 */
 
   /* Infinite loop */

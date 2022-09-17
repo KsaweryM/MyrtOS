@@ -11,7 +11,7 @@ typedef void (*scheduler_add_thread_t) (scheduler_t* scheduler, const thread_att
 typedef void (*scheduler_add_thread_control_block_t) (scheduler_t* scheduler, thread_control_block_t* thread_control_block);
 typedef uint32_t* (*scheduler_choose_next_thread_t) (scheduler_t* scheduler, uint32_t* SP_register);
 typedef mutex_t* (*scheduler_create_mutex_t) (scheduler_t* scheduler);
-typedef void (*scheduler_block_thread_t) (scheduler_t* scheduler, uint32_t milliseconds);
+typedef void (*scheduler_block_thread_t) (scheduler_t* scheduler, uint32_t delay);
 
 struct scheduler_t
 {

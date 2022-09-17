@@ -28,7 +28,7 @@ mutex_t* scheduler_create_mutex(scheduler_t* scheduler)
 	return scheduler->scheduler_create_mutex(scheduler);
 }
 
-void scheduler_block_thread(scheduler_t* scheduler, uint32_t milliseconds)
+void scheduler_block_thread(scheduler_t* scheduler, uint32_t delay)
 {
-	scheduler->scheduler_block_thread(scheduler, milliseconds);
+	scheduler->scheduler_block_thread(scheduler, delay);
 }

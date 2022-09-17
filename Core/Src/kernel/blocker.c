@@ -20,7 +20,7 @@ struct blocker_t
 blocker_t* blocker_g = 0;
 
 void __blocker_init_timer(void);
-void __blocker_set_timer(uint32_t seconds);
+void __blocker_set_timer(uint32_t delay);
 void __blocker_disable_timer(void);
 
 blocker_t* blocker_create(scheduler_t* scheduler)
@@ -91,6 +91,8 @@ void blocker_block_thread(blocker_t* blocker, thread_control_block_t* thread)
 
 			uint32_t first_blocked_thread_remaining_delay = (current_TIM2_value <= first_blocked_thread_delay) ? (first_blocked_thread_delay - current_TIM2_value) : 0;
 			thread_control_block_set_delay(first_blocked_thread, first_blocked_thread_remaining_delay);
+
+			TIM2->CNT = 0;
 		}
 
 		// find a suitable place for new blocked thread
@@ -158,11 +160,11 @@ void __blocker_init_timer(void)
 	CRITICAL_PATH_EXIT();
 }
 
-void __blocker_set_timer(uint32_t milliseconds)
+void __blocker_set_timer(uint32_t delay)
 {
 	CRITICAL_PATH_ENTER();
 
-	TIM2->ARR = (milliseconds <= 1) ? 1 : (milliseconds - 1);
+	TIM2->ARR = (delay <= 1) ? 1 : (delay - 1);
 
   TIM2->CNT = 0;
 

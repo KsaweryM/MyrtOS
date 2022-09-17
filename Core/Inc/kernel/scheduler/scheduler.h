@@ -20,6 +20,6 @@ uint32_t* scheduler_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_regi
 void scheduler_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
 void scheduler_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block);
 mutex_t* scheduler_create_mutex(scheduler_t* scheduler);
-void scheduler_block_thread(scheduler_t* scheduler, uint32_t milliseconds);
+void scheduler_block_thread(scheduler_t* scheduler, uint32_t delay);
 
 #endif

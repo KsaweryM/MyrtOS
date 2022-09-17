@@ -12,7 +12,7 @@
 
 static void __system_timer_initialize(uint32_t CPU_frequency);
 static uint32_t* __choose_next_thread(uint32_t* SP_register);
-static void __kernel_block_thread(kernel_t* kernel, uint32_t seconds);
+static void __kernel_block_thread(kernel_t* kernel, uint32_t delay);
 
 struct kernel_t
 {
@@ -110,9 +110,9 @@ mutex_t* kernel_create_mutex(kernel_t* kernel)
   return mutex;
 }
 
-void __kernel_block_thread(kernel_t* kernel, uint32_t milliseconds)
+void __kernel_block_thread(kernel_t* kernel, uint32_t delay)
 {
-	scheduler_block_thread(kernel->scheduler, milliseconds);
+	scheduler_block_thread(kernel->scheduler, delay);
 }
 
 __attribute__((naked)) void SysTick_Handler(void)
@@ -214,10 +214,10 @@ static void __system_timer_initialize(uint32_t CPU_frequency)
   SysTick->CTRL |= ENABLE;
 }
 
-void delay(uint32_t milliseconds)
+void delay(uint32_t delay)
 {
 	assert(kernel_g);
-	__kernel_block_thread(kernel_g, milliseconds);
+	__kernel_block_thread(kernel_g, delay);
 }
 
 uint32_t get_CPU_frequency()

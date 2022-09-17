@@ -32,12 +32,12 @@ struct scheduler_round_robin_t
 
 scheduler_round_robin_t* scheduler_round_robin_g = 0;
 
-void __scheduler_round_robin_destroy(scheduler_t* scheduler);
-uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register);
-void __scheduler_round_robin_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
-void __scheduler_round_robin_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block);
-mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler);
-void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t milliseconds);
+static void __scheduler_round_robin_destroy(scheduler_t* scheduler);
+static uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register);
+static void __scheduler_round_robin_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
+static void __scheduler_round_robin_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block);
+static mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler);
+void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay);
 
 static void __scheduler_round_robin_deactivate_current_thread(void);
 static void __scheduler_round_robin_destroy_deactivated_threads(scheduler_t* scheduler);
@@ -334,12 +334,12 @@ static void __mutex_round_robin_destroy(mutex_t* mutex)
 	CRITICAL_PATH_EXIT();
 }
 
-void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t milliseconds)
+void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay)
 {
 	CRITICAL_PATH_ENTER();
 
 	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
-	thread_control_block_set_delay(scheduler_round_robin->current_thread, milliseconds);
+	thread_control_block_set_delay(scheduler_round_robin->current_thread, delay);
 	scheduler_round_robin->state = BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
 
 	CRITICAL_PATH_EXIT();
