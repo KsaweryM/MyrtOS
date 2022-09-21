@@ -5,11 +5,11 @@
 #include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <kernel/atomic.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <kernel/mutex/mutex.h>
 
 #ifndef GLOBAL_TEST_REPETITIONS
 #define TEST2_REPETITIONS 5

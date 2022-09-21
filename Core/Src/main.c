@@ -39,6 +39,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -46,13 +47,30 @@
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+    return 1;
+}
 
+__attribute__((weak)) int _write(int file, char *ptr, int len)
+{
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
+    __io_putchar(*ptr++);
+  }
+  return len;
+}
 /* USER CODE END 0 */
 
 /**
@@ -81,15 +99,21 @@ int main(void)
   /* USER CODE END SysInit */
 
   /* Initialize all configured peripherals */
+  MX_GPIO_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  //test0(ROUND_ROBIN_SCHEDULING); // basic test
-  //test1(ROUND_ROBIN_SCHEDULING); // mutex test
-  //test2(ROUND_ROBIN_SCHEDULING); // thread yield test
-  //test3(ROUND_ROBIN_SCHEDULING); // thread yield test 2
-  //test4(ROUND_ROBIN_SCHEDULING); // mutex test2
-  //test5(ROUND_ROBIN_SCHEDULING); // delay 1
-  test6(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING); // delay 2
+  SCHEDULER_ALGORITHM algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING;
+
+  /*
+  test0(algorithm); // basic test
+  test1(algorithm); // mutex test
+  test2(algorithm); // thread yield test
+  test3(algorithm); // thread yield test 2
+  test4(algorithm); // mutex test2
+  test5(algorithm); // delay 1
+  */
+  test6(algorithm); // delay 2
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,6 +142,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -130,6 +155,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -143,6 +169,54 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * @brief GPIO Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_GPIO_Init(void)
+{
+
+  /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOA_CLK_ENABLE();
+
 }
 
 /* USER CODE BEGIN 4 */
@@ -201,4 +275,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-

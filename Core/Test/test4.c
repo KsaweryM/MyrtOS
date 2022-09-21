@@ -5,11 +5,11 @@
 #include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <kernel/atomic.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <kernel/mutex/mutex.h>
 
 #ifndef GLOBAL_TEST_REPETITIONS
 #define TEST4_REPETITIONS 5
@@ -19,9 +19,23 @@
 
 #define TEST4_END_VALUE 50
 
+uint32_t fail_thread_id = 0;
+uint32_t fail_counter = 0;
+
+void my_assert(uint32_t condition, uint32_t thread_id)
+{
+	if (!condition)
+	{
+		fail_thread_id = thread_id;
+		fail_counter++;
+		assert(0);
+	}
+}
+
+
+
 uint32_t test4_nr_tasks = 0;
 volatile uint32_t test4_cm_memory = 0;
-volatile uint32_t test4_task2_counter = 0;
 volatile uint32_t test4_task2_finished = 0;
 
 typedef struct test4_args
@@ -29,9 +43,15 @@ typedef struct test4_args
 	mutex_t* mutex_object;
 	uint32_t value_to_deliver;
 	uint32_t* finished;
+	uint32_t thread_id;
 } test4_args;
 
+typedef struct test4_args2
+{
+	uint32_t* finished;
+	uint32_t nr_threads;
 
+} test4_args2;
 
 void test4_task(void* args)
 {
@@ -44,13 +64,13 @@ void test4_task(void* args)
 	for (uint32_t i = 0; i < TEST4_END_VALUE; i++)
 	{
 		mutex_lock(mutex_object);
-		assert(test4_cm_memory == 0);
+		my_assert(test4_cm_memory == 0, test4_args_object->thread_id);
 
 		test4_cm_memory = value_to_deliver;
 
 		YIELD();
 
-		assert(test4_cm_memory == value_to_deliver);
+		my_assert(test4_cm_memory == value_to_deliver, test4_args_object->thread_id);
 
 		test4_cm_memory = 0;
 
@@ -64,11 +84,29 @@ void test4_task(void* args)
 void test4_task2(void* args)
 {
 	test4_task2_finished = 0;
-	test4_task2_counter = 0;
 
-	for (uint32_t i = 0; i < test4_nr_tasks * TEST4_REPETITIONS; i++)
+	volatile test4_args2* test4_args2_obj = (test4_args2*) args;
+
+	while (1)
 	{
-		test4_task2_counter++;
+		uint32_t threads_finished = 1;
+
+		uint32_t i;
+		for (i = 0; i < test4_args2_obj->nr_threads; i++)
+		{
+			threads_finished = test4_args2_obj->finished[i] && threads_finished;
+
+			if (!threads_finished)
+			{
+				break;
+			}
+		}
+
+		if (threads_finished)
+		{
+			break;
+		}
+
 		YIELD();
 	}
 
@@ -97,6 +135,7 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 			args[j].mutex_object = mutex_object;
 			args[j].value_to_deliver = j + 1;
 			args[j].finished = &finished[j];
+			args[j].thread_id = j;
 
 			finished[j] = 0;
 		}
@@ -108,16 +147,21 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 			threads_attributes[j].function = test4_task;
 			threads_attributes[j].function_arguments = &args[j];
 			threads_attributes[j].stack_size = 2000;
-			threads_attributes[j].thread_priority = rand() % 10;
+			threads_attributes[j].thread_priority = rand() % 10 + 1;
 
 			kernel_add_thread(kernel_object, &threads_attributes[j]);
 		}
 
+		test4_args2 test4_args2_obj = {
+				.finished = finished,
+				.nr_threads = test4_nr_tasks
+
+		};
 		thread_attributes_t thread2_attributes = {
 				.function = test4_task2,
-				.function_arguments = 0,
+				.function_arguments = &test4_args2_obj,
 				.stack_size = 1000,
-				.thread_priority = rand() % 16
+				.thread_priority = 0
 		};
 
 		kernel_add_thread(kernel_object, &thread2_attributes);
@@ -127,19 +171,24 @@ uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 		kernel_destroy(kernel_object);
 
 
-		mutex_destroy(mutex_object);
+		for (uint32_t j = 0; j < test4_nr_tasks; j++)
+		{
+			assert(finished[j] == 1);
+		}
 
-		free(args);
-		free(threads_attributes);
+		mutex_destroy(mutex_object);
 
 		for (uint32_t j = 0; j < test4_nr_tasks; j++)
 		{
 			assert(finished[j] == 1);
 		}
 
+
+		free(args);
+		free(threads_attributes);
+
 		free(finished);
 
-		assert(test4_task2_counter ==  test4_nr_tasks * TEST4_REPETITIONS);
 		assert(test4_task2_finished == 1);
 	}
 

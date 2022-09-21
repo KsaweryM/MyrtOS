@@ -1,5 +1,4 @@
 #include <kernel/scheduler/scheduler_p.h>
-#include <kernel/mutex_p.h>
 #include <kernel/scheduler/scheduler_round_robin.h>
 #include <kernel/list.h>
 #include <kernel/atomic.h>
@@ -25,7 +24,6 @@ struct scheduler_round_robin_t
   iterator_t* threads_iterator;
   uint32_t* main_thread_SP_register;
 	thread_control_block_t* current_thread;
-	mutex_t* current_mutex;
 	blocker_t* blocker;
 	SCHEDULER_ROUND_ROBIN_STATE state;
 };
@@ -36,15 +34,14 @@ static void __scheduler_round_robin_destroy(scheduler_t* scheduler);
 static uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register);
 static void __scheduler_round_robin_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes);
 static void __scheduler_round_robin_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block);
-static mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler);
-void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay);
+static void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay);
+static void __scheduler_round_robin_change_thread_priority(scheduler_t* scheduler, thread_control_block_t* thread_control_block, uint32_t priority);
+static uint32_t __scheduler_round_robin_get_nr_priorities(scheduler_t* scheduler);
+static thread_control_block_t* __scheduler_round_robin_get_current_thread(scheduler_t* scheduler);
+static void __scheduler_round_robin_set_mutex_state(scheduler_t* scheduler);
 
 static void __scheduler_round_robin_deactivate_current_thread(void);
 static void __scheduler_round_robin_destroy_deactivated_threads(scheduler_t* scheduler);
-
-static void __mutex_round_robin_lock(mutex_t* mutex);
-static void __mutex_round_robin_unlock(mutex_t* mutex);
-static void __mutex_round_robin_destroy(mutex_t* mutex);
 
 scheduler_round_robin_t* scheduler_round_robin_create()
 {
@@ -55,18 +52,20 @@ scheduler_round_robin_t* scheduler_round_robin_create()
 		scheduler_round_robin_g = malloc(sizeof(*scheduler_round_robin_g));
 
 		scheduler_round_robin_g->scheduler.scheduler_destroy = __scheduler_round_robin_destroy;
+		scheduler_round_robin_g->scheduler.scheduler_choose_next_thread = __scheduler_round_robin_choose_next_thread;
 		scheduler_round_robin_g->scheduler.scheduler_add_thread = __scheduler_round_robin_add_thread;
 		scheduler_round_robin_g->scheduler.scheduler_add_thread_control_block = __scheduler_round_robin_add_thread_control_block;
-		scheduler_round_robin_g->scheduler.scheduler_choose_next_thread = __scheduler_round_robin_choose_next_thread;
-		scheduler_round_robin_g->scheduler.scheduler_create_mutex = __scheduler_round_robin_create_mutex;
 		scheduler_round_robin_g->scheduler.scheduler_block_thread = __scheduler_round_robin_block_thread;
+		scheduler_round_robin_g->scheduler.scheduler_change_thread_priority = __scheduler_round_robin_change_thread_priority;
+		scheduler_round_robin_g->scheduler.scheduler_get_nr_priorities = __scheduler_round_robin_get_nr_priorities;
+		scheduler_round_robin_g->scheduler.scheduler_get_current_thread = __scheduler_round_robin_get_current_thread;
+		scheduler_round_robin_g->scheduler.scheduler_set_mutex_state = __scheduler_round_robin_set_mutex_state;
 
 		scheduler_round_robin_g->threads_list = list_create();
 		scheduler_round_robin_g->deactivated_threads = list_create();
 		scheduler_round_robin_g->threads_iterator = iterator_create(scheduler_round_robin_g->threads_list);
 		scheduler_round_robin_g->main_thread_SP_register = 0;
 		scheduler_round_robin_g->current_thread = 0;
-		scheduler_round_robin_g->current_mutex = 0;
 		scheduler_round_robin_g->blocker = blocker_create((scheduler_t*) scheduler_round_robin_g);
 
 		scheduler_round_robin_g->state = SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
@@ -77,7 +76,7 @@ scheduler_round_robin_t* scheduler_round_robin_create()
 	return scheduler_round_robin_g;
 }
 
-void __scheduler_round_robin_destroy(scheduler_t* scheduler)
+static void __scheduler_round_robin_destroy(scheduler_t* scheduler)
 {
 	CRITICAL_PATH_ENTER();
 
@@ -117,28 +116,7 @@ void __scheduler_round_robin_destroy(scheduler_t* scheduler)
 	CRITICAL_PATH_EXIT();
 }
 
-void __scheduler_round_robin_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes)
-{
-	CRITICAL_PATH_ENTER();
-
-	thread_control_block_t* thread_control_block = thread_control_block_create(thread_attributes, __scheduler_round_robin_deactivate_current_thread);
-	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
-	list_push_back(scheduler_round_robin->threads_list, thread_control_block);
-
-	CRITICAL_PATH_EXIT();
-}
-
-void __scheduler_round_robin_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block)
-{
-	CRITICAL_PATH_ENTER();
-
-	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
-	list_push_back(scheduler_round_robin->threads_list, thread_control_block);
-
-	CRITICAL_PATH_EXIT();
-}
-
-uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register)
+static uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uint32_t* SP_register)
 {
 	CRITICAL_PATH_ENTER();
 
@@ -174,19 +152,14 @@ uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uin
 	}
 	else if (scheduler_round_robin->state == SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD)
 	{
-		assert(scheduler_round_robin->current_mutex);
+		thread_control_block_set_stack_pointer(scheduler_round_robin->current_thread, SP_register);
 
-		thread_control_block_t* suspended_thread = (thread_control_block_t*) cyclic_iterator_pop(scheduler_round_robin->threads_iterator);
-		thread_control_block_set_stack_pointer(suspended_thread, SP_register);
-
-		list_push_back(scheduler_round_robin->current_mutex->suspended_threads, suspended_thread);
-
-		scheduler_round_robin->current_mutex = 0;
+		cyclic_iterator_pop(scheduler_round_robin->threads_iterator);
 
 		scheduler_round_robin->current_thread = (thread_control_block_t*)iterator_get_data(scheduler_round_robin->threads_iterator);
 
 		scheduler_round_robin->state = (scheduler_round_robin->current_thread == 0) ?
-						NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD : SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
+								NO_THREADS_LEFT_SO_DELETE_DEACTIVATED_THREADS_ADD_CHOOSE_MAIN_THREAD : SAVE_CURRENT_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
 	}
 	else if (scheduler_round_robin->state == BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD)
 	{
@@ -214,6 +187,78 @@ uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* scheduler, uin
 	CRITICAL_PATH_EXIT();
 
 	return next_SP_register;
+}
+
+static void __scheduler_round_robin_add_thread(scheduler_t* scheduler, const thread_attributes_t* thread_attributes)
+{
+	CRITICAL_PATH_ENTER();
+
+	thread_control_block_t* thread_control_block = thread_control_block_create(thread_attributes, __scheduler_round_robin_deactivate_current_thread);
+	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
+	list_push_back(scheduler_round_robin->threads_list, thread_control_block);
+
+	CRITICAL_PATH_EXIT();
+}
+
+static void __scheduler_round_robin_add_thread_control_block(scheduler_t* scheduler, thread_control_block_t* thread_control_block)
+{
+	CRITICAL_PATH_ENTER();
+
+	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
+	list_push_back(scheduler_round_robin->threads_list, thread_control_block);
+
+	CRITICAL_PATH_EXIT();
+}
+
+static void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay)
+{
+	CRITICAL_PATH_ENTER();
+
+	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
+	thread_control_block_set_delay(scheduler_round_robin->current_thread, delay);
+	scheduler_round_robin->state = BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
+
+	CRITICAL_PATH_EXIT();
+
+	YIELD();
+}
+
+static void __scheduler_round_robin_change_thread_priority(scheduler_t* scheduler, thread_control_block_t* thread_control_block, uint32_t priority)
+{
+
+}
+
+static uint32_t __scheduler_round_robin_get_nr_priorities(scheduler_t* scheduler)
+{
+	return 1;
+}
+
+static thread_control_block_t* __scheduler_round_robin_get_current_thread(scheduler_t* scheduler)
+{
+	CRITICAL_PATH_ENTER();
+
+	assert(scheduler == (scheduler_t*) scheduler_round_robin_g);
+
+	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
+
+	thread_control_block_t* current_thread = scheduler_round_robin->current_thread;
+
+	CRITICAL_PATH_EXIT();
+
+	return current_thread;
+}
+
+static void __scheduler_round_robin_set_mutex_state(scheduler_t* scheduler)
+{
+	CRITICAL_PATH_ENTER();
+
+	assert(scheduler == (scheduler_t*) scheduler_round_robin_g);
+
+	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
+
+	scheduler_round_robin->state = SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
+
+	CRITICAL_PATH_EXIT();
 }
 
 static void __scheduler_round_robin_deactivate_current_thread(void)
@@ -256,94 +301,3 @@ static void __scheduler_round_robin_destroy_deactivated_threads(scheduler_t* sch
 
 	CRITICAL_PATH_EXIT();
 }
-
-mutex_t* __scheduler_round_robin_create_mutex(scheduler_t* scheduler)
-{
-	CRITICAL_PATH_ENTER();
-
-	mutex_t* mutex = malloc(sizeof(*mutex));
-
-	mutex->suspended_threads = list_create();
-	mutex->suspended_threads_iterator = iterator_create(mutex->suspended_threads);
-	mutex->is_locked = 0;
-
-	mutex->mutex_lock = __mutex_round_robin_lock;
-	mutex->mutex_unlock = __mutex_round_robin_unlock;
-	mutex->mutex_destroy = __mutex_round_robin_destroy;
-
-	CRITICAL_PATH_EXIT();
-
-	return mutex;
-}
-
-static void __mutex_round_robin_lock(mutex_t* mutex)
-{
-	CRITICAL_PATH_ENTER();
-
-	mutex->is_locked++;
-
-	bool is_mutex_locked = mutex->is_locked >= 2;
-
-	if (is_mutex_locked)
-	{
-		scheduler_round_robin_t* scheduler = (scheduler_round_robin_t*) scheduler_round_robin_g;
-		scheduler->state = SUSPEND_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
-		scheduler->current_mutex = mutex;
-	}
-
-	CRITICAL_PATH_EXIT();
-
-	if (is_mutex_locked)
-	{
-		YIELD();
-	}
-}
-
-static void __mutex_round_robin_unlock(mutex_t* mutex)
-{
-	CRITICAL_PATH_ENTER();
-
-	assert(mutex->is_locked);
-
-	if (mutex->is_locked)
-	{
-		mutex->is_locked--;
-
-		if (!list_is_empty(mutex->suspended_threads))
-		{
-			iterator_reset(mutex->suspended_threads_iterator);
-			thread_control_block_t* resumed_thread = cyclic_iterator_pop(mutex->suspended_threads_iterator);
-			scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler_round_robin_g;
-			list_push_back(scheduler_round_robin->threads_list, resumed_thread);
-		}
-	}
-
-	CRITICAL_PATH_EXIT();
-}
-
-static void __mutex_round_robin_destroy(mutex_t* mutex)
-{
-	CRITICAL_PATH_ENTER();
-
-	assert(list_is_empty(mutex->suspended_threads));
-	list_destroy(mutex->suspended_threads);
-	iterator_destroy(mutex->suspended_threads_iterator);
-
-	free(mutex);
-
-	CRITICAL_PATH_EXIT();
-}
-
-void  __scheduler_round_robin_block_thread(scheduler_t* scheduler, uint32_t delay)
-{
-	CRITICAL_PATH_ENTER();
-
-	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
-	thread_control_block_set_delay(scheduler_round_robin->current_thread, delay);
-	scheduler_round_robin->state = BLOCK_CURRENT_THREAD_AND_CHOOSE_NEXT_THREAD;
-
-	CRITICAL_PATH_EXIT();
-
-	YIELD();
-}
-

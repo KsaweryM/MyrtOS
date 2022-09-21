@@ -1,11 +1,12 @@
 #include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <kernel/atomic.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <kernel/mutex/mutex.h>
+#include <stdio.h>
 
 #ifndef GLOBAL_TEST_REPETITIONS
 #define TEST6_REPETITIONS 5
@@ -15,6 +16,12 @@
 
 #define TEST6_I 10
 
+
+#ifdef TEST6_DEBUG
+#define PRINT(X) printf("%s", X);
+#else
+#define PRINT(X)
+#endif
 
 volatile uint32_t test6_basic_counter0 = 0;
 volatile uint32_t test6_basic_counter1 = 0;
@@ -33,6 +40,13 @@ void test6_basic0(void* args)
 		delay(delay_value);
 	}
 
+	test6_basic0_i *= test6_basic0_i;
+
+	// basic0 is first
+	assert((test6_basic_counter1 || test6_basic_counter2 || test6_basic_counter3) == 0);
+
+	PRINT("thread 0 has finished\r\n");
+
 	test6_basic_counter0++;
 }
 
@@ -44,6 +58,10 @@ void test6_basic1(void* args)
 	{
 		delay(delay_value);
 	}
+
+	assert(test6_basic_counter0 && (test6_basic_counter2 || test6_basic_counter3 == 0));
+
+	PRINT("thread 1 has finished\r\n");
 
 	test6_basic_counter1++;
 }
@@ -57,6 +75,10 @@ void test6_basic2(void* args)
 		delay(delay_value);
 	}
 
+	assert(test6_basic_counter0 && test6_basic_counter1 && (test6_basic_counter3 == 0));
+
+	PRINT("thread 2 has finished\r\n");
+
 	test6_basic_counter2++;
 }
 
@@ -68,6 +90,10 @@ void test6_basic3(void* args)
 	{
 		delay(delay_value);
 	}
+
+	assert(test6_basic_counter0 && test6_basic_counter1 && test6_basic_counter2);
+
+	PRINT("thread 3 has finished\r\n");
 
 	test6_basic_counter3++;
 }
@@ -89,17 +115,17 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 		test6_basic_counter3 = 0;
 		test6_basic_counter4 = 0;
 
-		uint32_t delay0 = 1000;
-		uint32_t delay1 = 3000;
-		uint32_t delay2 = 4000;
-		uint32_t delay3 = 4000;
+		uint32_t delay0 = 200;
+		uint32_t delay1 = 400;
+		uint32_t delay2 = 600;
+		uint32_t delay3 = 800;
 
 		thread_attributes_t thread_basic0 = {
 					.function = test6_basic0,
 					.thread_name = "basic0",
 					.function_arguments = &delay0,
 					.stack_size = 1000,
-					.thread_priority = 15
+					.thread_priority = rand() % 15 + 1
 			};
 
 		thread_attributes_t thread_basic1 = {
@@ -107,7 +133,7 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_name = "basic1",
 					.function_arguments = &delay1,
 					.stack_size = 1000,
-					.thread_priority = 15
+					.thread_priority = rand() % 15 + 1
 			};
 
 		thread_attributes_t thread_basic2 = {
@@ -115,7 +141,7 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_name = "basic2",
 					.function_arguments = &delay2,
 					.stack_size = 1000,
-					.thread_priority = 15
+					.thread_priority = rand() % 15 + 1
 			};
 
 		thread_attributes_t thread_basic3 = {
@@ -123,7 +149,7 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_name = "basic3",
 					.function_arguments = &delay3,
 					.stack_size = 1000,
-					.thread_priority = 15
+					.thread_priority = rand() % 15 + 1
 			};
 
 		thread_attributes_t thread_basic4 = {
@@ -131,7 +157,7 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 					.thread_name = "basic4",
 					.function_arguments = 0,
 					.stack_size = 1000,
-					.thread_priority = 15
+					.thread_priority = 0
 			};
 
 		kernel_attributes_t kernel_attributes_object = {
@@ -146,11 +172,20 @@ uint32_t test6(SCHEDULER_ALGORITHM scheduler_algorithm)
 		kernel_add_thread(kernel_object, &thread_basic3);
 		kernel_add_thread(kernel_object, &thread_basic4);
 
+		PRINT("START\r\n");
+
 		kernel_launch(kernel_object);
 
 		kernel_destroy(kernel_object);
 
+		PRINT("END\r\n\n");
+
 		assert(test6_basic_counter0 && test6_basic_counter1 && test6_basic_counter2 && test6_basic_counter3 && test6_basic_counter4);
+
+		test6_basic0_i = 0;
+		test6_basic1_i = 0;
+		test6_basic2_i = 0;
+		test6_basic3_i = 0;
 	}
 
 	return 0;

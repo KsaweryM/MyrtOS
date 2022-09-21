@@ -1,9 +1,9 @@
 #ifndef __KERNEL_H
 #define __KERNEL_H
 
+#include <kernel/mutex/mutex.h>
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <stdint.h>
 #include <stm32l4xx.h>
 

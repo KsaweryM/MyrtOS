@@ -1,0 +1,10 @@
+#ifndef __MUTEX_WITHOUT_PRIORITY_INHERITANCE_H
+#define __MUTEX_WITHOUT_PRIORITY_INHERITANCE_H
+
+#include <kernel/mutex/mutex.h>
+
+typedef struct mutex_without_priority_inheritance_t mutex_without_priority_inheritance_t;
+
+mutex_without_priority_inheritance_t* mutex_without_priority_inheritance_create(scheduler_t* scheduler);
+
+#endif

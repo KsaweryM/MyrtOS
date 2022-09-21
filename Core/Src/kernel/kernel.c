@@ -4,6 +4,8 @@
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/scheduler/scheduler_round_robin.h>
 #include <kernel/scheduler/scheduler_priority_time_slicing.h>
+#include <kernel/mutex/mutex_with_priority_inheritance.h>
+#include <kernel/mutex/mutex_without_priority_inheritance.h>
 #include <assert.h>
 
 #define CLKSOURCE		(1U << 2)
@@ -17,6 +19,7 @@ static void __kernel_block_thread(kernel_t* kernel, uint32_t delay);
 struct kernel_t
 {
   scheduler_t* scheduler;
+  SCHEDULER_ALGORITHM scheduler_algorithm;
 };
 
 kernel_t* kernel_g = 0;
@@ -34,8 +37,9 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
 
   kernel_g = malloc(sizeof(*kernel_g));
   kernel_g->scheduler = 0;
+  kernel_g->scheduler_algorithm = kernel_attributes->scheduler_algorithm;
 
-  switch (kernel_attributes->scheduler_algorithm)
+  switch (kernel_g->scheduler_algorithm)
   {
   case ROUND_ROBIN_SCHEDULING:
   	kernel_g->scheduler = (scheduler_t*) scheduler_round_robin_create();
@@ -101,9 +105,20 @@ mutex_t* kernel_create_mutex(kernel_t* kernel)
 {
   CRITICAL_PATH_ENTER();
 
-  assert(kernel);
+  mutex_t* mutex = 0;
 
-  mutex_t* mutex = scheduler_create_mutex(kernel->scheduler);
+  if (kernel->scheduler_algorithm == ROUND_ROBIN_SCHEDULING
+  		|| kernel->scheduler_algorithm == COOPERATIVE_SCHEDULING)
+  {
+  	mutex = (mutex_t*) mutex_without_priority_inheritance_create(kernel->scheduler);
+  }
+  else if (kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING
+  		|| kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING)
+  {
+  	mutex = (mutex_t*) mutex_with_priority_inheritance_create(kernel->scheduler);
+  }
+
+  assert(mutex);
 
   CRITICAL_PATH_EXIT();
 

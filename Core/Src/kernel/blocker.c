@@ -5,11 +5,15 @@
 #include <kernel/list.h>
 #include <stm32l4xx.h>
 
-#define ENABLE_TIM2_CLOCK			(1U<<0)
-#define ENABLE_TIM2           (1U<<0)
+#define TIM2_REINIT_COUNTER   (1U<<0)
+#define TIM2_DOWNCOUNTER      (1U<<4)
+#define TIM2_ENABLE_CLOCK			(1U<<0)
+#define TIM2_ENABLE           (1U<<0)
 #define TIM2_UIF							(1U<<0)
-#define ENABLE_TIM2_INTERRUPT	(1U<<0)
+#define TIM2_ENABLE_INTERRUPT	(1U<<0)
+
 #define TIM2_IS_PENDING_STATE (TIM2->SR & TIM2_UIF)
+
 struct blocker_t
 {
 	scheduler_t* scheduler;
@@ -21,6 +25,7 @@ blocker_t* blocker_g = 0;
 
 void __blocker_init_timer(void);
 void __blocker_set_timer(uint32_t delay);
+void __blocker_enable_timer(void);
 void __blocker_disable_timer(void);
 
 blocker_t* blocker_create(scheduler_t* scheduler)
@@ -67,6 +72,8 @@ void blocker_block_thread(blocker_t* blocker, thread_control_block_t* thread)
 {
 	CRITICAL_PATH_ENTER();
 
+	__blocker_disable_timer();
+
 	if (list_is_empty(blocker->blocked_threads))
 	{
 		list_push_back(blocker->blocked_threads, thread);
@@ -77,23 +84,15 @@ void blocker_block_thread(blocker_t* blocker, thread_control_block_t* thread)
 		iterator_reset(blocker->blocked_threads_iterator);
 		thread_control_block_t* first_blocked_thread = iterator_get_data(blocker->blocked_threads_iterator);
 
-		// if TIM2 has pending state, then first blocked thread's time is up
-		if (TIM2_IS_PENDING_STATE)
-		{
-			thread_control_block_set_delay(first_blocked_thread, 0);
-		}
-		else
-		{
-			// update delay of first blocked thread in list
-			uint32_t first_blocked_thread_delay = thread_control_block_get_delay(first_blocked_thread);
+		// update delay of first blocked thread in list
+		uint32_t first_blocked_thread_delay = thread_control_block_get_delay(first_blocked_thread);
 
-			uint32_t current_TIM2_value = TIM2->CNT;
+		uint32_t current_TIM2_value = TIM2->CNT;
 
-			uint32_t first_blocked_thread_remaining_delay = (current_TIM2_value <= first_blocked_thread_delay) ? (first_blocked_thread_delay - current_TIM2_value) : 0;
-			thread_control_block_set_delay(first_blocked_thread, first_blocked_thread_remaining_delay);
+		uint32_t first_blocked_thread_remaining_delay = (current_TIM2_value <= first_blocked_thread_delay) ? (first_blocked_thread_delay - current_TIM2_value) : 0;
+		thread_control_block_set_delay(first_blocked_thread, first_blocked_thread_remaining_delay);
 
-			TIM2->CNT = 0;
-		}
+		TIM2->CNT = 0;
 
 		// find a suitable place for new blocked thread
 
@@ -131,13 +130,10 @@ void blocker_block_thread(blocker_t* blocker, thread_control_block_t* thread)
 			iterator_next(blocker->blocked_threads_iterator);
 		}
 
-		if (!TIM2_IS_PENDING_STATE)
-		{
-			iterator_reset(blocker->blocked_threads_iterator);
-			thread_control_block_t* current_first_blocked_thread = iterator_get_data(blocker->blocked_threads_iterator);
-			uint32_t current_first_blocked_thread_delay = thread_control_block_get_delay(current_first_blocked_thread);
-			__blocker_set_timer(current_first_blocked_thread_delay);
-		}
+		iterator_reset(blocker->blocked_threads_iterator);
+		thread_control_block_t* current_first_blocked_thread = iterator_get_data(blocker->blocked_threads_iterator);
+		uint32_t current_first_blocked_thread_delay = thread_control_block_get_delay(current_first_blocked_thread);
+		__blocker_set_timer(current_first_blocked_thread_delay);
 	}
 
 	CRITICAL_PATH_EXIT();
@@ -145,43 +141,55 @@ void blocker_block_thread(blocker_t* blocker, thread_control_block_t* thread)
 
 void __blocker_init_timer(void)
 {
-	CRITICAL_PATH_ENTER();
+  CRITICAL_PATH_ENTER();
 
-  RCC->APB1ENR1 |= ENABLE_TIM2_CLOCK;
-
+  RCC->APB1ENR1 |= TIM2_ENABLE_CLOCK;
   TIM2->PSC = get_CPU_frequency() / 1000 - 1;
 
-  TIM2->CR1 &= ~ENABLE_TIM2;
+  TIM2->CR1 &= ~TIM2_ENABLE;
 
-  TIM2->DIER |= ENABLE_TIM2_INTERRUPT;
+  TIM2->CR1 &= ~TIM2_DOWNCOUNTER;
+
+  TIM2->EGR |= (1U<<0);
+
+  TIM2->SR &= ~TIM2_UIF;
+
+  TIM2->DIER |= TIM2_ENABLE_INTERRUPT;
 
   NVIC_EnableIRQ(TIM2_IRQn);
 
-	CRITICAL_PATH_EXIT();
+  CRITICAL_PATH_EXIT();
 }
 
 void __blocker_set_timer(uint32_t delay)
 {
-	CRITICAL_PATH_ENTER();
+  CRITICAL_PATH_ENTER();
 
-	TIM2->ARR = (delay <= 1) ? 1 : (delay - 1);
+  TIM2->ARR = (delay <= 1) ? 1 : (delay - 1);
 
   TIM2->CNT = 0;
 
-  TIM2->CR1 = ENABLE_TIM2;
+  TIM2->CR1 |= TIM2_ENABLE;
 
-	CRITICAL_PATH_EXIT();
+  CRITICAL_PATH_EXIT();
+}
+
+void __blocker_enable_timer(void)
+{
+  CRITICAL_PATH_ENTER();
+
+  TIM2->CR1 |= TIM2_ENABLE;
+
+  CRITICAL_PATH_EXIT();
 }
 
 void __blocker_disable_timer(void)
 {
-	CRITICAL_PATH_ENTER();
+  CRITICAL_PATH_ENTER();
 
-  TIM2->SR &= ~TIM2_UIF;
+  TIM2->CR1 &= ~TIM2_ENABLE;
 
-	TIM2->CR1 &= ~ENABLE_TIM2;
-
-	CRITICAL_PATH_EXIT();
+  CRITICAL_PATH_EXIT();
 }
 
 void TIM2_IRQHandler(void)
@@ -190,35 +198,26 @@ void TIM2_IRQHandler(void)
 
 	__blocker_disable_timer();
 
+  TIM2->SR &= ~TIM2_UIF;
+
   iterator_reset(blocker_g->blocked_threads_iterator);
 
-  thread_control_block_t* thread = iterator_pop(blocker_g->blocked_threads_iterator);
-
-  assert(thread);
-
-  scheduler_add_thread_control_block(blocker_g->scheduler, thread);
-
-  while (1)
+  if (!list_is_empty(blocker_g->blocked_threads))
   {
-  	thread = iterator_get_data(blocker_g->blocked_threads_iterator);
+		thread_control_block_t* thread = iterator_pop(blocker_g->blocked_threads_iterator);
 
-  	if (thread == 0)
-  	{
-  		break;
-  	}
+		assert(thread);
 
-  	uint32_t delay = thread_control_block_get_delay(thread);
+		scheduler_add_thread_control_block(blocker_g->scheduler, thread);
 
-  	if (delay == 0)
-  	{
-  	  scheduler_add_thread_control_block(blocker_g->scheduler, thread);
-  	  iterator_pop(blocker_g->blocked_threads_iterator);
-  	}
-  	else
-  	{
-    	__blocker_set_timer(delay);
-    	break;
-  	}
+		thread = iterator_get_data(blocker_g->blocked_threads_iterator);
+
+		if (thread != 0)
+		{
+			uint32_t delay = thread_control_block_get_delay(thread);
+			__blocker_set_timer(delay);
+		}
+
   }
 
 	CRITICAL_PATH_EXIT();

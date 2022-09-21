@@ -250,3 +250,33 @@ uint32_t cyclic_iterator_previous(iterator_t* iterator)
 
   return iterator->current_list_item == 0;
 }
+
+void iterator_remove_item_by_data(iterator_t* iterator, void* data)
+{
+	if (iterator->current_list_item == data)
+	{
+		iterator_pop(iterator);
+	}
+	else
+	{
+		list_item_t* current_list_item = iterator->current_list_item;
+
+		iterator_reset(iterator);
+
+		while (1)
+		{
+			void* current_data = iterator_get_data(iterator);
+
+			assert(current_data);
+
+			if (current_data == data)
+			{
+				break;
+			}
+		}
+
+		iterator_pop(iterator);
+
+		iterator->current_list_item = current_list_item;
+	}
+}

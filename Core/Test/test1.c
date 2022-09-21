@@ -5,11 +5,11 @@
 #include "tests.h"
 #include <kernel/kernel.h>
 #include <kernel/thread.h>
-#include <kernel/mutex.h>
 #include <kernel/atomic.h>
 #include <time.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <kernel/mutex/mutex.h>
 
 #ifndef GLOBAL_TEST_REPETITIONS
 #define TEST1_REPETITIONS 5
@@ -48,12 +48,8 @@ typedef struct task3_args
 
 void test1_task1(void* args)
 {
-	CRITICAL_PATH_ENTER();
-
 	task1_args* task1_args_object = (task1_args*) args;
 	mutex_lock(task1_args_object->mutex_object);
-
-	CRITICAL_PATH_EXIT();
 
 	assert(task1_counter == 0);
 	assert(task2_counter == 0);
@@ -200,7 +196,6 @@ uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 			kernel_add_thread(kernel_object, &task2_attributes);
 			kernel_add_thread(kernel_object, &task3_attributes);
 		}
-
 
 		kernel_launch(kernel_object);
 

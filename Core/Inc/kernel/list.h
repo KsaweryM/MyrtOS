@@ -35,4 +35,6 @@ void* cyclic_iterator_pop(iterator_t* iterator);
 uint32_t cyclic_iterator_next(iterator_t* iterator);
 uint32_t cyclic_iterator_previous(iterator_t* iterator);
 
+void iterator_remove_item_by_data(iterator_t* iterator, void* data);
+
 #endif
