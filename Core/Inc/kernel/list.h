@@ -26,6 +26,7 @@ void iterator_destroy(iterator_t* iterator);
 void* iterator_get_data(const iterator_t* iterator);
 void* iterator_pop(iterator_t* iterator);
 void iterator_reset(iterator_t* iterator);
+void iterator_update(iterator_t* iterator);
 
 uint32_t iterator_next(iterator_t* iterator);
 uint32_t iterator_previous(iterator_t* iterator);

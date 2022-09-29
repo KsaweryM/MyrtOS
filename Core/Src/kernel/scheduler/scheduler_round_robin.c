@@ -122,6 +122,8 @@ static uint32_t* __scheduler_round_robin_choose_next_thread(scheduler_t* schedul
 
 	scheduler_round_robin_t* scheduler_round_robin = (scheduler_round_robin_t*) scheduler;
 
+	iterator_update(scheduler_round_robin->threads_iterator);
+
 	if (scheduler_round_robin->state == SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD)
 	{
 		scheduler_round_robin->main_thread_SP_register = SP_register;

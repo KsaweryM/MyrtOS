@@ -55,22 +55,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-int __io_putchar(int ch)
-{
-    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
-    return 1;
-}
 
-__attribute__((weak)) int _write(int file, char *ptr, int len)
-{
-  int DataIdx;
-
-  for (DataIdx = 0; DataIdx < len; DataIdx++)
-  {
-    __io_putchar(*ptr++);
-  }
-  return len;
-}
 /* USER CODE END 0 */
 
 /**
@@ -103,17 +88,18 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  SCHEDULER_ALGORITHM algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING;
+  SCHEDULER_ALGORITHM algorithm = ROUND_ROBIN_SCHEDULING;
 
-  /*
   test0(algorithm); // basic test
   test1(algorithm); // mutex test
   test2(algorithm); // thread yield test
   test3(algorithm); // thread yield test 2
   test4(algorithm); // mutex test2
   test5(algorithm); // delay 1
-  */
   test6(algorithm); // delay 2
+
+  if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
+  	test7(algorithm);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -220,7 +206,22 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+int __io_putchar(int ch)
+{
+    HAL_UART_Transmit(&huart2, (uint8_t*)&ch, 1, HAL_MAX_DELAY);
+    return 1;
+}
 
+__attribute__((weak)) int _write(int file, char *ptr, int len)
+{
+  int DataIdx;
+
+  for (DataIdx = 0; DataIdx < len; DataIdx++)
+  {
+    __io_putchar(*ptr++);
+  }
+  return len;
+}
 /* USER CODE END 4 */
 
 /**

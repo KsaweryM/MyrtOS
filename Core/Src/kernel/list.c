@@ -168,6 +168,14 @@ void iterator_reset(iterator_t* iterator)
   iterator->current_list_item = iterator->iterator_owner->list_begin;
 }
 
+void iterator_update(iterator_t* iterator)
+{
+	if (iterator->current_list_item == 0)
+	{
+		iterator_reset(iterator);
+	}
+}
+
 uint32_t iterator_next(iterator_t* iterator)
 {
   if (iterator->current_list_item != 0)
@@ -277,6 +285,6 @@ void iterator_remove_item_by_data(iterator_t* iterator, void* data)
 
 		iterator_pop(iterator);
 
-		iterator->current_list_item = current_list_item;
+		iterator->current_list_item = list_is_empty(iterator->iterator_owner) ? 0 : current_list_item;
 	}
 }

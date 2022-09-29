@@ -122,6 +122,11 @@ static uint32_t* __scheduler_priority_time_slicing_choose_next_thread(scheduler_
 
 	scheduler_priority_time_slicing_t* scheduler_priority_time_slicing = (scheduler_priority_time_slicing_t*) scheduler;
 
+	for (uint32_t i = 0; i < NUMBER_PRIORITIES; i++)
+	{
+		iterator_update(scheduler_priority_time_slicing->threads_iterators[i]);
+	}
+
 	if (scheduler_priority_time_slicing->state == SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD)
 	{
 		scheduler_priority_time_slicing->main_thread_SP_register = SP_register;
