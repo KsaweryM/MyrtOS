@@ -88,7 +88,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  SCHEDULER_ALGORITHM algorithm = ROUND_ROBIN_SCHEDULING;
+  SCHEDULER_ALGORITHM algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING;
 
   test0(algorithm); // basic test
   test1(algorithm); // mutex test

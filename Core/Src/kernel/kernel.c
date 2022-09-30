@@ -2,11 +2,11 @@
 #include <kernel/kernel.h>
 #include <kernel/list.h>
 #include <kernel/scheduler/scheduler.h>
-#include <kernel/scheduler/scheduler_round_robin.h>
-#include <kernel/scheduler/scheduler_priority_time_slicing.h>
 #include <kernel/mutex/mutex_with_priority_inheritance.h>
 #include <kernel/mutex/mutex_without_priority_inheritance.h>
 #include <assert.h>
+#include <kernel/scheduler/scheduler_with_priority.h>
+#include <kernel/scheduler/scheduler_without_priority.h>
 
 #define CLKSOURCE		(1U << 2)
 #define TICKINT			(1U << 1)
@@ -42,10 +42,10 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
   switch (kernel_g->scheduler_algorithm)
   {
   case ROUND_ROBIN_SCHEDULING:
-  	kernel_g->scheduler = (scheduler_t*) scheduler_round_robin_create();
+  	kernel_g->scheduler = (scheduler_t*) scheduler_without_priority_create();
   	break;
   case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING:
-  	kernel_g->scheduler = (scheduler_t*) scheduler_priority_time_slicing_create();
+  	kernel_g->scheduler = (scheduler_t*) scheduler_with_priority_create();
   	break;
   case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING:
   	break;
