@@ -3,7 +3,7 @@
 
 volatile int32_t critical_path_depth = 0;
 
-void YIELD()
+void yield()
 {
 		assert(!critical_path_depth);
 
@@ -14,6 +14,13 @@ void YIELD()
 		__enable_irq();
 
 		while (INTCTRL & PENDSTET);
+}
+
+void yield_after_critical_path()
+{
+		SysTick->VAL = 0;
+
+		INTCTRL = PENDSTET;
 }
 
 void critical_path_depth_test(void)

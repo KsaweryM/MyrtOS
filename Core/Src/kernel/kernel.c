@@ -12,7 +12,8 @@
 #define TICKINT			(1U << 1)
 #define ENABLE			(1U << 0)
 
-static void __system_timer_initialize(uint32_t CPU_frequency);
+static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency);
+static void __system_timer_initialize_without_time_slicing(uint32_t CPU_frequency);
 static uint32_t* __choose_next_thread(uint32_t* SP_register);
 static void __kernel_block_thread(kernel_t* kernel, uint32_t delay);
 
@@ -48,8 +49,10 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
   	kernel_g->scheduler = (scheduler_t*) scheduler_with_priority_create();
   	break;
   case PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING:
+  	kernel_g->scheduler = (scheduler_t*) scheduler_with_priority_create();
   	break;
   case COOPERATIVE_SCHEDULING:
+  	kernel_g->scheduler = (scheduler_t*) scheduler_without_priority_create();
   	break;
   }
 
@@ -87,9 +90,22 @@ void kernel_launch(const kernel_t* kernel)
 {
   uint32_t CPU_frequency = get_CPU_frequency();
 
-  __system_timer_initialize(CPU_frequency);
+  scheduler_launch(kernel->scheduler);
 
-  YIELD();
+  if (kernel->scheduler_algorithm == ROUND_ROBIN_SCHEDULING || kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
+  {
+  	__system_timer_initialize_with_time_slicing(CPU_frequency);
+  }
+  else if (kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING || kernel->scheduler_algorithm == COOPERATIVE_SCHEDULING)
+  {
+  	__system_timer_initialize_without_time_slicing(CPU_frequency);
+  }
+  else
+  {
+  	assert(0);
+  }
+
+  yield();
 }
 
 void kernel_add_thread(kernel_t* kernel, const thread_attributes_t* thread_attributes)
@@ -158,7 +174,7 @@ __attribute__((unused)) static uint32_t* __choose_next_thread(uint32_t* SP_regis
   return scheduler_choose_next_thread(kernel_g->scheduler, SP_register);
 }
 
-static void __system_timer_initialize(uint32_t CPU_frequency)
+static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency)
 {
   /*
    kernel uses a 24-bit system timer SysTick.
@@ -227,6 +243,26 @@ static void __system_timer_initialize(uint32_t CPU_frequency)
 
   // Enables the counter by setting appropriate bit in SYST_CSR register
   SysTick->CTRL |= ENABLE;
+}
+
+static void __system_timer_initialize_without_time_slicing(uint32_t CPU_frequency)
+{
+  register const uint32_t kernel_priority = 15;
+
+  // Reset SYST_CSR register
+  SysTick->CTRL = 0;
+
+  // Reset SYST_CVR register
+  SysTick->VAL = 0;
+
+  // Set kernel priority
+  NVIC_SetPriority(SysTick_IRQn, kernel_priority);
+
+  // Indicates the clock source by setting appropriate bit in SYST_CSR register
+  SysTick->CTRL |= CLKSOURCE;
+
+  // Enables SysTick exception request by setting appropriate bit in SYST_CSR register
+  SysTick->CTRL |= TICKINT;
 }
 
 void delay(uint32_t delay)

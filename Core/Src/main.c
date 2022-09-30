@@ -88,18 +88,39 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-  SCHEDULER_ALGORITHM algorithm = PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING;
+  SCHEDULER_ALGORITHM algorithms[] = {ROUND_ROBIN_SCHEDULING, PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING,
+  		PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING, COOPERATIVE_SCHEDULING};
 
-  test0(algorithm); // basic test
-  test1(algorithm); // mutex test
-  test2(algorithm); // thread yield test
-  test3(algorithm); // thread yield test 2
-  test4(algorithm); // mutex test2
-  test5(algorithm); // delay 1
-  test6(algorithm); // delay 2
+  register const uint32_t nr_algorithms = sizeof(algorithms) / sizeof(algorithms[0]);
 
-  if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
-  	test7(algorithm);
+  for (uint32_t algorithm_index = 0; algorithm_index < nr_algorithms; algorithm_index++)
+  {
+		SCHEDULER_ALGORITHM algorithm = algorithms[algorithm_index];
+
+		test0(algorithm); // basic test
+		test1(algorithm); // mutex test
+		test2(algorithm); // thread yield test
+		test3(algorithm); // thread yield test 2
+		test4(algorithm); // mutex test2
+		test5(algorithm); // delay 1 test
+		test6(algorithm); // delay 2 test
+
+		if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
+			test7(algorithm); // priority inverted test
+
+		if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING || algorithm == ROUND_ROBIN_SCHEDULING)
+			test8(algorithm); // switch contex by timer
+
+		if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING || algorithm == COOPERATIVE_SCHEDULING)
+			test9(algorithm); // yield test 3 without timer
+
+		if (algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING || algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING)
+		{
+			test10(algorithm); // switch contex after add thread with higher priority
+			test11(algorithm); // switch contex after unblock thread with higher priority (delay)
+		}
+  }
+
   /* USER CODE END 2 */
 
   /* Infinite loop */

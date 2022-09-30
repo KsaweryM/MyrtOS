@@ -61,7 +61,7 @@ void test1_task1(void* args)
 		assert(task1_counter == i + 1);
 		assert(task2_counter == 0);
 
-		YIELD();
+		yield();
 	}
 
 	assert(task1_counter == TEST1_END_VALUE);
@@ -87,7 +87,7 @@ void test1_task2(void* args)
 		assert(task1_counter == TEST1_END_VALUE);
 		assert(task2_counter == i + 1);
 
-		YIELD();
+		yield();
 	}
 
 	assert(task2_counter == TEST1_END_VALUE);
@@ -103,7 +103,7 @@ void test1_task3(void* args)
 
 	for (uint32_t i = 0; i < 10 * TEST1_END_VALUE; i++)
 	{
-		YIELD();
+		yield();
 	}
 
 	(*task3_args_object->end) = 1;
@@ -114,6 +114,13 @@ void test1_task3(void* args)
 
 uint32_t test1(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
+	task1_counter = 0;
+	task2_counter = 0;
+
+	task1_finished = 0;
+	task2_finished = 0;
+	task3_finished = 0;
+
 	for (uint32_t i = 0; i < TEST1_REPETITIONS; i++)
 	{
 		task1_counter = 0;

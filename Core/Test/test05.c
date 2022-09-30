@@ -71,13 +71,22 @@ void test5_basic3(void* args)
 
 void test5_basic4(void* args)
 {
-	while (!(test5_basic_counter0 && test5_basic_counter1 && test5_basic_counter2 && test5_basic_counter3));
+	while (!(test5_basic_counter0 && test5_basic_counter1 && test5_basic_counter2 && test5_basic_counter3))
+	{
+		yield();
+	}
 
 	test5_basic_counter4++;
 }
 
 uint32_t test5(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
+	test5_basic_counter0 = 0;
+	test5_basic_counter1 = 0;
+	test5_basic_counter2 = 0;
+	test5_basic_counter3 = 0;
+	test5_basic_counter4 = 0;
+
 	thread_attributes_t thread_basic0 = {
 				.function = test5_basic0,
 				.thread_name = "basic0",

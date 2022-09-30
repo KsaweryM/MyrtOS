@@ -47,3 +47,8 @@ void scheduler_set_mutex_state(scheduler_t* scheduler)
 {
 	scheduler->scheduler_set_mutex_state(scheduler);
 }
+
+void scheduler_launch (scheduler_t* scheduler)
+{
+	scheduler->scheduler_launch(scheduler);
+}

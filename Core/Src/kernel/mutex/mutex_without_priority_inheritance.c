@@ -73,7 +73,7 @@ static void __mutex_without_priority_inheritance_lock(mutex_t* mutex)
 
 	if (is_mutex_overlocked)
 	{
-		YIELD();
+		yield();
 	}
 }
 static void __mutex_without_priority_inheritance_unlock(mutex_t* mutex)

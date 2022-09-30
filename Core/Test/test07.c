@@ -38,19 +38,19 @@ void test7_lowest_priority(void* args)
 	mutex_lock(test7_args->mutex);
 
 	kernel_add_thread(test7_args->kernel, test7_args->test7_highest_priority_attributes);
-	YIELD();
+	yield();
 	// test7_average_priority_counter == 0 because test7_medium_priority thread wasn't added to kernel
 	// test7_highest_priority_counter == 0 because test7_highest_priority was locked on mutex
 	assert(test7_average_priority_counter == 0 && test7_highest_priority_counter == 0);
 
 	kernel_add_thread(test7_args->kernel, test7_args->test7_medium_priority_attributes);
-	YIELD();
+	yield();
 	// test7_average_priority_counter == 0 because test7_lowest_priority inherited highest priority and it has higher priority than test7_medium_priority
 	// test7_highest_priority_counter == 0 because test7_highest_priority was locked on mutex
 	assert(test7_average_priority_counter == 0 && test7_highest_priority_counter == 0);
 
 	mutex_unlock(test7_args->mutex);
-	YIELD();
+	yield();
 	// test7_lowest_priority has lowest priority again
 	assert(test7_average_priority_counter == 1 && test7_highest_priority_counter == 1);
 
@@ -72,17 +72,21 @@ void test7_highest_priority(void* args)
 
 	mutex_lock(test7_args->mutex);
 	assert(test7_lowest_priority_counter == 0 && test7_average_priority_counter == 0);
-	YIELD();
+	yield();
 
 	mutex_unlock(test7_args->mutex);
 	assert(test7_lowest_priority_counter == 0 && test7_average_priority_counter == 0);
-	YIELD();
+	yield();
 
 	test7_highest_priority_counter = 1;
 }
 
 uint32_t test7(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
+	test7_lowest_priority_counter = 0;
+	test7_average_priority_counter = 0;
+	test7_highest_priority_counter = 0;
+
 	kernel_attributes_t kernel_attributes_object = {
 			.scheduler_algorithm = scheduler_algorithm
 	};

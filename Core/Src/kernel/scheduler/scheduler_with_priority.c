@@ -28,6 +28,7 @@ struct scheduler_with_priority_t
 	thread_control_block_t* current_thread;
 	blocker_t* blocker;
 	SCHEDULER_WITH_PRIORITY_STATE state;
+	uint32_t is_launched;
 };
 
 scheduler_with_priority_t* scheduler_with_priority_g = 0;
@@ -41,6 +42,7 @@ static void __scheduler_with_priority_change_thread_priority(scheduler_t* schedu
 static uint32_t  __scheduler_with_priority_get_nr_priorities(scheduler_t* scheduler);
 static thread_control_block_t* __scheduler_with_priority_get_current_thread(scheduler_t* scheduler);
 static void  __scheduler_with_priority_set_mutex_state(scheduler_t* scheduler);
+static void  __scheduler_with_priority_launch(scheduler_t* scheduler);
 
 static void __scheduler_with_priority_deactivate_current_thread(void);
 static void __scheduler_with_priority_destroy_deactivated_threads(scheduler_t* scheduler);
@@ -63,7 +65,7 @@ scheduler_with_priority_t* scheduler_with_priority_create()
 		scheduler_with_priority_g->scheduler.scheduler_get_nr_priorities = __scheduler_with_priority_get_nr_priorities;
 		scheduler_with_priority_g->scheduler.scheduler_get_current_thread = __scheduler_with_priority_get_current_thread;
 		scheduler_with_priority_g->scheduler.scheduler_set_mutex_state = __scheduler_with_priority_set_mutex_state;
-
+		scheduler_with_priority_g->scheduler.scheduler_launch = __scheduler_with_priority_launch;
 
 		scheduler_with_priority_g->threads_lists = malloc(sizeof(*scheduler_with_priority_g->threads_lists) * NUMBER_PRIORITIES);
 		scheduler_with_priority_g->deactivated_threads = list_create();
@@ -73,6 +75,7 @@ scheduler_with_priority_t* scheduler_with_priority_create()
 		scheduler_with_priority_g->blocker = blocker_create((scheduler_t*) scheduler_with_priority_g);
 
 		scheduler_with_priority_g->state = SAVE_MAIN_THREAD_SP_REGISTER_AND_CHOOSE_NEXT_THREAD;
+		scheduler_with_priority_g->is_launched = 0;
 
 		for (uint32_t i = 0; i < NUMBER_PRIORITIES; i++)
 		{
@@ -253,6 +256,11 @@ static void __scheduler_with_priority_add_thread(scheduler_t* scheduler, const t
 	scheduler_with_priority_t* scheduler_with_priority = (scheduler_with_priority_t*) scheduler;
 	list_push_back(scheduler_with_priority->threads_lists[thread_attributes->thread_priority], thread_control_block);
 
+	if (scheduler_with_priority->is_launched)
+	{
+		yield_after_critical_path();
+	}
+
 	CRITICAL_PATH_EXIT();
 }
 
@@ -263,6 +271,11 @@ static void __scheduler_with_priority_add_thread_control_block(scheduler_t* sche
 	scheduler_with_priority_t* scheduler_with_priority = (scheduler_with_priority_t*) scheduler;
 	uint32_t thread_priority = thread_control_block_get_priority(thread_control_block);
 	list_push_back(scheduler_with_priority->threads_lists[thread_priority], thread_control_block);
+
+	if (scheduler_with_priority->is_launched)
+	{
+		yield_after_critical_path();
+	}
 
 	CRITICAL_PATH_EXIT();
 }
@@ -277,7 +290,7 @@ static void  __scheduler_with_priority_block_thread(scheduler_t* scheduler, uint
 
 	CRITICAL_PATH_EXIT();
 
-	YIELD();
+	yield();
 }
 
 static void __scheduler_with_priority_change_thread_priority(scheduler_t* scheduler, thread_control_block_t* thread_control_block, uint32_t priority)
@@ -335,6 +348,17 @@ static void  __scheduler_with_priority_set_mutex_state(scheduler_t* scheduler)
 	CRITICAL_PATH_EXIT();
 }
 
+static void __scheduler_with_priority_launch(scheduler_t* scheduler)
+{
+	CRITICAL_PATH_ENTER();
+
+	scheduler_with_priority_t* scheduler_with_priority = (scheduler_with_priority_t*) scheduler;
+
+	scheduler_with_priority->is_launched = 1;
+
+	CRITICAL_PATH_EXIT();
+}
+
 static void __scheduler_with_priority_deactivate_current_thread(void)
 {
 	CRITICAL_PATH_ENTER();
@@ -347,7 +371,7 @@ static void __scheduler_with_priority_deactivate_current_thread(void)
 
 	CRITICAL_PATH_EXIT();
 
-	YIELD();
+	yield();
 
 	assert(0);
 }

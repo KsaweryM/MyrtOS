@@ -27,7 +27,7 @@ void test2_task0(void* args)
 	for (uint32_t i = 0; i < TEST1_END_VALUE; i++)
 	{
 		test2_counter++;
-		YIELD();
+		yield();
 		test2_d2 = test2_d2 | test2_counter;
 	}
 }
@@ -38,12 +38,15 @@ void test2_task1(void* args)
 	for (uint32_t i = 0; i < TEST1_END_VALUE; i++)
 	{
 		test2_counter=0;
-		YIELD();
+		yield();
 	}
 }
 
 uint32_t test2(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
+	test2_counter = 0;
+	test2_d2 = 0;
+
 	thread_attributes_t task0_attributes = {
 		.thread_name = "task1",
 		.function = test2_task0,

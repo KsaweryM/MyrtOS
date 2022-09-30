@@ -68,14 +68,14 @@ void test4_task(void* args)
 
 		test4_cm_memory = value_to_deliver;
 
-		YIELD();
+		yield();
 
 		my_assert(test4_cm_memory == value_to_deliver, test4_args_object->thread_id);
 
 		test4_cm_memory = 0;
 
 		mutex_unlock(mutex_object);
-		YIELD();
+		yield();
 	}
 
 	(*finished)++;
@@ -107,7 +107,7 @@ void test4_task2(void* args)
 			break;
 		}
 
-		YIELD();
+		yield();
 	}
 
 	test4_task2_finished = 1;
@@ -115,6 +115,9 @@ void test4_task2(void* args)
 
 uint32_t test4(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
+	fail_thread_id = 0;
+	fail_counter = 0;
+
 	for (uint32_t i = 0; i < TEST4_REPETITIONS; i++)
 	{
 		kernel_attributes_t kernel_attributes_object = {

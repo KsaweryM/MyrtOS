@@ -100,7 +100,10 @@ void test6_basic3(void* args)
 
 void test6_basic4(void* args)
 {
-	while (!(test6_basic_counter0 && test6_basic_counter1 && test6_basic_counter2 && test6_basic_counter3));
+	while (!(test6_basic_counter0 && test6_basic_counter1 && test6_basic_counter2 && test6_basic_counter3))
+	{
+		yield();
+	}
 
 	test6_basic_counter4++;
 }

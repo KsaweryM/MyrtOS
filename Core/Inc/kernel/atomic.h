@@ -30,7 +30,9 @@ void critical_path_depth_test(void);
   } while (0);
 
 
-void YIELD();
+void yield();
+
+void yield_after_critical_path();
 
 #define ATOMIC_SET(VARIABLE, VALUE) \
   do                                \
