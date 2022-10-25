@@ -12,7 +12,7 @@
 #define TICKINT			(1U << 1)
 #define ENABLE			(1U << 0)
 
-static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency);
+static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency, uint32_t context_switch_period_in_milliseconds);
 static void __system_timer_initialize_without_time_slicing(uint32_t CPU_frequency);
 static uint32_t* __choose_next_thread(uint32_t* SP_register);
 static void __kernel_block_thread(kernel_t* kernel, uint32_t delay);
@@ -21,9 +21,12 @@ struct kernel_t
 {
   scheduler_t* scheduler;
   SCHEDULER_ALGORITHM scheduler_algorithm;
+  uint32_t context_switch_period_in_milliseconds;
+
 };
 
 kernel_t* kernel_g = 0;
+volatile uint32_t is_initialized = 0;
 
 kernel_t* kernel_get_instance(void)
 {
@@ -39,6 +42,7 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
   kernel_g = malloc(sizeof(*kernel_g));
   kernel_g->scheduler = 0;
   kernel_g->scheduler_algorithm = kernel_attributes->scheduler_algorithm;
+  kernel_g->context_switch_period_in_milliseconds = 100; // default value
 
   switch (kernel_g->scheduler_algorithm)
   {
@@ -58,6 +62,8 @@ kernel_t* kernel_create(const kernel_attributes_t* kernel_attributes)
 
   assert(kernel_g->scheduler);
 
+  is_initialized = 1;
+
   CRITICAL_PATH_EXIT();
 
   return kernel_g;
@@ -68,6 +74,12 @@ void kernel_destroy(kernel_t* kernel)
 {
   CRITICAL_PATH_ENTER();
 
+  SysTick->CTRL &= !TICKINT;
+
+  SysTick->CTRL &= !ENABLE;
+
+  __NVIC_ClearPendingIRQ(SysTick_IRQn);
+
   assert(kernel == kernel_g);
   assert(kernel_g);
   
@@ -77,11 +89,7 @@ void kernel_destroy(kernel_t* kernel)
 
   kernel_g = 0;
 
-  // disable sysTick
-  SysTick->CTRL &= !TICKINT;
-
-  // remove pend state
-  INTCTRL &= !PENDSTET;
+  is_initialized = 0;
 
   CRITICAL_PATH_EXIT();
 }
@@ -94,7 +102,7 @@ void kernel_launch(const kernel_t* kernel)
 
   if (kernel->scheduler_algorithm == ROUND_ROBIN_SCHEDULING || kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING)
   {
-  	__system_timer_initialize_with_time_slicing(CPU_frequency);
+  	__system_timer_initialize_with_time_slicing(CPU_frequency, kernel->context_switch_period_in_milliseconds);
   }
   else if (kernel->scheduler_algorithm == PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING || kernel->scheduler_algorithm == COOPERATIVE_SCHEDULING)
   {
@@ -171,10 +179,15 @@ __attribute__((naked)) void SysTick_Handler(void)
 
 __attribute__((unused)) static uint32_t* __choose_next_thread(uint32_t* SP_register)
 {
+	if (!is_initialized)
+	{
+		assert(is_initialized);
+	}
+
   return scheduler_choose_next_thread(kernel_g->scheduler, SP_register);
 }
 
-static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency)
+static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency, uint32_t context_switch_period_in_milliseconds)
 {
   /*
    kernel uses a 24-bit system timer SysTick.
@@ -220,8 +233,11 @@ static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency)
   register const uint32_t ticks_per_millisecond = CPU_frequency / 1000;
 
   // TOOD: get these attributes from user
-  register const uint32_t context_switch_period_in_milliseconds = 100;
+  //register const uint32_t context_switch_period_in_milliseconds = 100;
   register const uint32_t kernel_priority = 15;
+  register const uint32_t reload_value = ticks_per_millisecond * context_switch_period_in_milliseconds - 1;
+
+  assert (reload_value < (1U << 24));
 
   // Reset SYST_CSR register
   SysTick->CTRL = 0;
@@ -230,7 +246,7 @@ static void __system_timer_initialize_with_time_slicing(uint32_t CPU_frequency)
   SysTick->VAL = 0;
 
   // Set reload value in SYST_RVR register
-  SysTick->LOAD = ticks_per_millisecond * context_switch_period_in_milliseconds - 1;
+  SysTick->LOAD = reload_value;
 
   // Set kernel priority
   NVIC_SetPriority(SysTick_IRQn, kernel_priority);
@@ -275,4 +291,9 @@ uint32_t get_CPU_frequency()
 {
   // TODO: get current CPU clock frequency
   return 4000000;
+}
+
+void kernel_change_context_switch_period_in_milliseconds(kernel_t* kernel, uint32_t period)
+{
+	kernel->context_switch_period_in_milliseconds = period;
 }

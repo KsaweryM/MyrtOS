@@ -26,4 +26,6 @@ mutex_t* kernel_create_mutex(kernel_t* kernel);
 void delay(uint32_t delay);
 uint32_t get_CPU_frequency();
 
+void kernel_change_context_switch_period_in_milliseconds(kernel_t* kernel, uint32_t period);
+
 #endif

@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "tests.h"
+#include "analize.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +32,11 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+
+#define ANALYZE
+//#define TEST
+//#define TEST12
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -88,6 +94,15 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+#ifdef ANALYZE
+  analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
+#endif
+
+#ifdef TEST12
+  test12(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
+#endif
+
+#ifdef TEST
   SCHEDULER_ALGORITHM algorithms[] = {ROUND_ROBIN_SCHEDULING, PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING,
   		PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING, COOPERATIVE_SCHEDULING};
 
@@ -120,6 +135,7 @@ int main(void)
 			test11(algorithm); // switch contex after unblock thread with higher priority (delay)
 		}
   }
+#endif
 
   /* USER CODE END 2 */
 
