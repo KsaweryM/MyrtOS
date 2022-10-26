@@ -45,6 +45,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -61,6 +63,9 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/**
+  * @brief This function handles TIM3 global interrupt.
+  */
 
 /* USER CODE END 0 */
 
@@ -95,7 +100,10 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
 #ifdef ANALYZE
+  analize00(ROUND_ROBIN_SCHEDULING);
   analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
+  analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING);
+  analize00(COOPERATIVE_SCHEDULING);
 #endif
 
 #ifdef TEST12

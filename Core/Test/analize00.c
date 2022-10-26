@@ -8,40 +8,85 @@
 
 //#define ANALIZE0_DEBUG
 
+TIM_HandleTypeDef htim3;
+
 volatile uint32_t analize0_end = 0;
+volatile uint32_t tim3_counter = 0;
+
+void TIM3_IRQHandler(void)
+{
+  /* USER CODE BEGIN TIM3_IRQn 0 */
+
+
+	analize0_end++;
+	//tim3_counter++;
+  /* USER CODE END TIM3_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim3);
+  /* USER CODE BEGIN TIM3_IRQn 1 */
+
+  /* USER CODE END TIM3_IRQn 1 */
+
+  if (analize0_end == 2)
+  HAL_TIM_Base_Stop_IT(&htim3);
+}
+
+
+static void MX_TIM3_Init(uint32_t period_in_seconds)
+{
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 4000 - 1;
+  //htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period =  period_in_seconds * 1000 - 1;
+  //htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
+  {
+    //Error_Handler();
+  }
+
+
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
+  {
+    //Error_Handler();
+  }
+
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
+  {
+    //Error_Handler();
+  }
+
+}
 
 void analize0_counter(void* atr)
 {
 	volatile uint32_t* counter = (uint32_t*) atr;
 
-  while(!analize0_end)
+  while(analize0_end != 2)
   {
     (*counter)++;
   }
 }
 
-void analize0_timer(void* atr)
-{
-	uint32_t* delay_interval = (uint32_t*) atr;
-
-	delay(*delay_interval);
-
-	analize0_end = 1;
-}
-
 void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
-	printf("nr_threads; thread_id; counter_of_thread; sum_of_counters; period_in_ms\r\n");
+	printf("nr_threads;thread_id;counter_of_thread;sum_of_counters;period_in_ms;algorithm\r\n");
 
 	register const uint32_t test_time_in_seconds = 16;
-	register uint32_t test_time_in_ms = test_time_in_seconds * 1000;
 
 	uint32_t contex_periods[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 	uint32_t contex_periods_size = sizeof(contex_periods) / sizeof(contex_periods[0]);
 
 	for (uint32_t contex_id = 0; contex_id < contex_periods_size; contex_id++)
 	{
-		for (uint32_t nr_threads = 4; nr_threads < 5; nr_threads++)
+		for (uint32_t nr_threads = 1; nr_threads <= 5; nr_threads++)
 		{
 			#ifdef ANALIZE0_DEBUG
 			printf("START\r\n");
@@ -64,14 +109,6 @@ void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 
 			}
 
-			uint32_t delay_value = test_time_in_ms;
-			thread_attributes_t timer = {
-				.function = analize0_timer,
-				.function_arguments = (void*) &delay_value,
-				.stack_size = 1000,
-				.thread_priority = 15
-			};
-
 			kernel_attributes_t kernel_attributes_object = {
 					.scheduler_algorithm = scheduler_algorithm
 			};
@@ -84,9 +121,11 @@ void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 			}
 
 			uint32_t contex_period = contex_periods[contex_id];
-			kernel_add_thread(kernel_object, &timer);
 
 			kernel_change_context_switch_period_in_milliseconds(kernel_object, contex_period);
+
+			MX_TIM3_Init(test_time_in_seconds);
+		  HAL_TIM_Base_Start_IT(&htim3);
 
 			kernel_launch(kernel_object);
 
@@ -104,10 +143,8 @@ void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 
 			for (uint32_t thread = 0; thread < nr_threads; thread++)
 			{
-				printf("%ld;%ld;%ld;%ld;%ld\r\n", nr_threads, thread, counters_value[thread], total, contex_period);
+				printf("%ld;%ld;%ld;%ld;%ld;%ld\r\n", nr_threads, thread, counters_value[thread], total, contex_period, (uint32_t) scheduler_algorithm);
 			}
-
-			printf("\r\n");
 
 			free((void*) counters_value);
 
