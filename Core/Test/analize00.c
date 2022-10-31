@@ -11,15 +11,15 @@
 TIM_HandleTypeDef htim3;
 
 volatile uint32_t analize0_end = 0;
-volatile uint32_t tim3_counter = 0;
+volatile uint32_t total_value = 0;
+volatile mutex_t mutex;
+volatile uint32_t yield_counter = 10;
 
 void TIM3_IRQHandler(void)
 {
   /* USER CODE BEGIN TIM3_IRQn 0 */
 
-
 	analize0_end++;
-	//tim3_counter++;
   /* USER CODE END TIM3_IRQn 0 */
   HAL_TIM_IRQHandler(&htim3);
   /* USER CODE BEGIN TIM3_IRQn 1 */
@@ -67,26 +67,28 @@ static void MX_TIM3_Init(uint32_t period_in_seconds)
 
 void analize0_counter(void* atr)
 {
-	volatile uint32_t* counter = (uint32_t*) atr;
+	volatile uint64_t* counter = (uint64_t*) atr;
 
-  while(analize0_end != 2)
-  {
-    (*counter)++;
-  }
+	for (uint32_t i = 0; i < yield_counter; i++)
+	{
+	mutex_lock(mutex);
+	total_value++;
+	mutex_unlock(mutex);
+	}
 }
 
 void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 	printf("nr_threads;thread_id;counter_of_thread;sum_of_counters;period_in_ms;algorithm\r\n");
 
-	register const uint32_t test_time_in_seconds = 16;
+	register const uint32_t test_time_in_seconds = 32;
 
-	uint32_t contex_periods[] = {1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
+	uint32_t contex_periods[] = {1}; //, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096};
 	uint32_t contex_periods_size = sizeof(contex_periods) / sizeof(contex_periods[0]);
 
 	for (uint32_t contex_id = 0; contex_id < contex_periods_size; contex_id++)
 	{
-		for (uint32_t nr_threads = 1; nr_threads <= 5; nr_threads++)
+		for (uint32_t nr_threads = 1; nr_threads <= 1; nr_threads++)
 		{
 			#ifdef ANALIZE0_DEBUG
 			printf("START\r\n");
@@ -96,7 +98,7 @@ void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 
 			thread_attributes_t* counters = malloc(sizeof(*counters) * nr_threads);
 
-			volatile uint32_t* counters_value = malloc(sizeof(*counters_value) * nr_threads);
+			volatile uint64_t* counters_value = malloc(sizeof(*counters_value) * nr_threads);
 
 			for (uint32_t thread = 0; thread < nr_threads; thread++)
 			{
@@ -135,7 +137,7 @@ void analize00(SCHEDULER_ALGORITHM scheduler_algorithm)
 
 			kernel_destroy(kernel_object);
 
-			uint32_t total = 0;
+			uint64_t total = 0;
 			for (uint32_t thread = 0; thread < nr_threads; thread++)
 			{
 				total += counters_value[thread];

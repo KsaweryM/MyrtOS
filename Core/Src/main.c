@@ -33,7 +33,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define ANALYZE
+#define ANALYZE00
+//#define ANALYZE01
 //#define TEST
 //#define TEST12
 
@@ -45,8 +46,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-
-
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -99,7 +98,14 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
-#ifdef ANALYZE
+#ifdef ANALYZE01
+  analize01(ROUND_ROBIN_SCHEDULING);
+  analize01(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
+  analize01(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING);
+  analize01(COOPERATIVE_SCHEDULING);
+#endif
+
+#ifdef ANALYZE00
   analize00(ROUND_ROBIN_SCHEDULING);
   analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
   analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING);
