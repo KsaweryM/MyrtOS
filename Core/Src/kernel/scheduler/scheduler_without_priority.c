@@ -63,6 +63,7 @@ scheduler_without_priority_t* scheduler_without_priority_create()
 		scheduler_without_priority_g->scheduler.scheduler_get_current_thread = __scheduler_without_priority_get_current_thread;
 		scheduler_without_priority_g->scheduler.scheduler_set_mutex_state = __scheduler_without_priority_set_mutex_state;
 		scheduler_without_priority_g->scheduler.scheduler_launch = __scheduler_without_priority_launch;
+		scheduler_without_priority_g->scheduler.scheduler_destroy_deactivated_threads = __scheduler_without_priority_destroy_deactivated_threads;
 
 		scheduler_without_priority_g->threads_list = list_create();
 		scheduler_without_priority_g->deactivated_threads = list_create();

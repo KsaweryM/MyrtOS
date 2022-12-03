@@ -100,6 +100,7 @@ uint32_t list_is_empty(const list_t* list)
 iterator_t* iterator_create(list_t* list)
 {
   iterator_t* iterator = malloc(sizeof(*iterator));
+  assert(iterator);
 
   iterator->current_list_item = list->list_begin;
   iterator->iterator_owner = list;
@@ -275,11 +276,20 @@ void iterator_remove_item_by_data(iterator_t* iterator, void* data)
 		{
 			void* current_data = iterator_get_data(iterator);
 
-			assert(current_data);
+			if (current_data == 0)
+			{
+				while (1);
+				assert(current_data);
+			}
+
 
 			if (current_data == data)
 			{
 				break;
+			}
+			else
+			{
+				iterator_next(iterator);
 			}
 		}
 

@@ -66,6 +66,7 @@ scheduler_with_priority_t* scheduler_with_priority_create()
 		scheduler_with_priority_g->scheduler.scheduler_get_current_thread = __scheduler_with_priority_get_current_thread;
 		scheduler_with_priority_g->scheduler.scheduler_set_mutex_state = __scheduler_with_priority_set_mutex_state;
 		scheduler_with_priority_g->scheduler.scheduler_launch = __scheduler_with_priority_launch;
+		scheduler_with_priority_g->scheduler.scheduler_destroy_deactivated_threads = __scheduler_with_priority_destroy_deactivated_threads;
 
 		scheduler_with_priority_g->threads_lists = malloc(sizeof(*scheduler_with_priority_g->threads_lists) * NUMBER_PRIORITIES);
 		scheduler_with_priority_g->deactivated_threads = list_create();
@@ -256,7 +257,8 @@ static void __scheduler_with_priority_add_thread(scheduler_t* scheduler, const t
 	scheduler_with_priority_t* scheduler_with_priority = (scheduler_with_priority_t*) scheduler;
 	list_push_back(scheduler_with_priority->threads_lists[thread_attributes->thread_priority], thread_control_block);
 
-	if (scheduler_with_priority->is_launched)
+	if (scheduler_with_priority->is_launched && scheduler_with_priority->current_thread != 0
+			&& thread_control_block_get_priority(scheduler_with_priority->current_thread) < thread_control_block_get_priority(thread_control_block))
 	{
 		yield_after_critical_path();
 	}

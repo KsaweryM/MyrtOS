@@ -297,3 +297,9 @@ void kernel_change_context_switch_period_in_milliseconds(kernel_t* kernel, uint3
 {
 	kernel->context_switch_period_in_milliseconds = period;
 }
+
+void kernel_destroy_deactivated_threads(void)
+{
+	assert(kernel_g);
+	scheduler_destroy_deactivated_threads(kernel_g->scheduler);
+}

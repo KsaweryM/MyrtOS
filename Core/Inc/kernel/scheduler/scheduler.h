@@ -24,6 +24,7 @@ void scheduler_change_thread_priority(scheduler_t* scheduler, thread_control_blo
 uint32_t scheduler_get_nr_priorities(scheduler_t* scheduler);
 thread_control_block_t* scheduler_get_current_thread(scheduler_t* scheduler);
 void scheduler_set_mutex_state(scheduler_t* scheduler);
-void scheduler_launch (scheduler_t* scheduler);
+void scheduler_launch(scheduler_t* scheduler);
+void scheduler_destroy_deactivated_threads(scheduler_t* scheduler);
 
 #endif

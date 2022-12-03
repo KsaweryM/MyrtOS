@@ -71,6 +71,32 @@ void test1_task1(void* args)
 	task1_finished++;
 }
 
+void thread(void* args)
+{
+	task2_args* task2_args_object = (task2_args*) args;
+
+	mutex_lock(task2_args_object->mutex_object);
+
+	assert(task1_counter == TEST1_END_VALUE);
+	assert(task2_counter == 0);
+
+	for (uint32_t i = 0; i < TEST1_END_VALUE; i++)
+	{
+		task2_counter++;
+
+		assert(task1_counter == TEST1_END_VALUE);
+		assert(task2_counter == i + 1);
+
+		yield();
+	}
+
+	assert(task2_counter == TEST1_END_VALUE);
+	assert(task1_counter == TEST1_END_VALUE);
+
+	mutex_unlock(task2_args_object->mutex_object);
+	task2_finished++;
+}
+
 void test1_task2(void* args)
 {
 	task2_args* task2_args_object = (task2_args*) args;

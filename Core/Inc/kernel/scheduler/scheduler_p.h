@@ -17,7 +17,7 @@ typedef void (*scheduler_set_mutex_t) (scheduler_t* scheduler, mutex_t* mutex);
 typedef thread_control_block_t* (*scheduler_get_current_thread_t) (scheduler_t* scheduler);
 typedef void (*scheduler_set_mutex_state_t) (scheduler_t* scheduler);
 typedef void (*scheduler_launch_t) (scheduler_t* scheduler);
-
+typedef void (*scheduler_destroy_deactivated_threads_t) (scheduler_t* scheduler);
 struct scheduler_t
 {
 	scheduler_destroy_t scheduler_destroy;
@@ -30,6 +30,7 @@ struct scheduler_t
 	scheduler_get_current_thread_t scheduler_get_current_thread;
 	scheduler_set_mutex_state_t scheduler_set_mutex_state;
 	scheduler_launch_t scheduler_launch;
+	scheduler_destroy_deactivated_threads_t scheduler_destroy_deactivated_threads;
 };
 
 #endif

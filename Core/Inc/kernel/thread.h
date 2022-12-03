@@ -26,4 +26,6 @@ void thread_control_block_set_stack_pointer(thread_control_block_t* thread_contr
 uint32_t thread_control_block_get_delay(const thread_control_block_t* thread_control_block);
 void thread_control_block_set_delay(thread_control_block_t* thread_control_block, uint32_t delay);
 
+char* thread_control_block_get_thread_name(const thread_control_block_t* thread_control_block);
+
 #endif

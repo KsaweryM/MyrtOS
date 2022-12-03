@@ -17,7 +17,7 @@ void measure_start(void)
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
   htim4.Instance = TIM4;
-  htim4.Init.Prescaler = 1;
+  htim4.Init.Prescaler = 1000;
   htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim4.Init.Period = 65535;
   htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -39,6 +39,12 @@ void measure_start(void)
   }
 
   HAL_TIM_Base_Start(&htim4);
+}
+
+uint32_t measure_get(void)
+{
+	uint32_t value = __HAL_TIM_GET_COUNTER(&htim4);
+	return value;
 }
 
 uint32_t measure_end(void)

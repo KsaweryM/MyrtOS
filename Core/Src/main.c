@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include "tests.h"
 #include "analize.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,8 +34,9 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
-#define ANALYZE00
+//#define ANALYZE00
 //#define ANALYZE01
+#define ANALYZE02
 //#define TEST
 //#define TEST12
 
@@ -98,6 +100,11 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
 
+#ifdef ANALYZE02
+  analize02(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
+  printf("MAIN END!!!\r\n");
+#endif
+
 #ifdef ANALYZE01
   analize01(ROUND_ROBIN_SCHEDULING);
   analize01(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
@@ -106,10 +113,10 @@ int main(void)
 #endif
 
 #ifdef ANALYZE00
-  analize00(ROUND_ROBIN_SCHEDULING);
+  //analize00(ROUND_ROBIN_SCHEDULING);
   analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITH_TIME_SLICING);
-  analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING);
-  analize00(COOPERATIVE_SCHEDULING);
+  //analize00(PRIORITIZED_PREEMPTIVE_SCHEDULING_WITHOUT_TIME_SLICING);
+  //analize00(COOPERATIVE_SCHEDULING);
 #endif
 
 #ifdef TEST12

@@ -4,6 +4,7 @@
 #include <kernel/scheduler/scheduler.h>
 #include <kernel/list.h>
 #include <stm32l4xx.h>
+#include <stdio.h>
 
 #define TIM2_REINIT_COUNTER   (1U<<0)
 #define TIM2_DOWNCOUNTER      (1U<<4)
@@ -55,7 +56,27 @@ void blocker_destroy(blocker_t* blocker)
 
 	// blocked_threads list must be empty
 	// maybe remove all thread from the list before destroying the list?
-	assert(list_is_empty(blocker->blocked_threads));
+
+	uint32_t is_empty = list_is_empty(blocker->blocked_threads);
+	if (!is_empty)
+	{
+		iterator_reset(blocker->blocked_threads_iterator);
+
+		while (1)
+		{
+			thread_control_block_t* thread = iterator_get_data(blocker->blocked_threads_iterator);
+			iterator_next(blocker->blocked_threads_iterator);
+
+			if (thread == 0)
+			{
+				break;
+			}
+
+			printf("%s is still in blocker!\r\n", thread_control_block_get_thread_name(thread));
+		}
+	}
+
+	assert(is_empty);
 	list_destroy(blocker->blocked_threads);
 	iterator_destroy(blocker->blocked_threads_iterator);
 
@@ -200,12 +221,23 @@ void TIM2_IRQHandler(void)
 
   TIM2->SR &= ~TIM2_UIF;
 
-  iterator_reset(blocker_g->blocked_threads_iterator);
+  if (list_is_empty(blocker_g->blocked_threads))
+  {
+  	printf("Blocker list is empty!\n");
+  }
+
+  //iterator_reset(blocker_g->blocked_threads_iterator);
 
   if (!list_is_empty(blocker_g->blocked_threads))
   {
+
+  	iterator_reset(blocker_g->blocked_threads_iterator);
 		thread_control_block_t* thread = iterator_pop(blocker_g->blocked_threads_iterator);
 
+		if (!thread)
+		{
+			printf("Something is wrong\n");
+		}
 		assert(thread);
 
 		scheduler_add_thread_control_block(blocker_g->scheduler, thread);

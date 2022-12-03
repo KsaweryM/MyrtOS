@@ -13,13 +13,15 @@ struct thread_control_block_t
 
 thread_control_block_t* thread_control_block_create(const thread_attributes_t* thread_attributes, void (*remove_thread_from_kernel_list)(void))
 {
-  register const uint32_t stack_size = thread_attributes->stack_size;
+  uint32_t stack_size = thread_attributes->stack_size;
   thread_control_block_t* thread_control_block = malloc(sizeof(*thread_control_block));
 
   thread_control_block->thread_name = thread_attributes->thread_name;
   thread_control_block->thread_priority = thread_attributes->thread_priority;
   thread_control_block->delay = 0;
   thread_control_block->allocated_memory_for_stack = malloc(sizeof(*thread_control_block->allocated_memory_for_stack) * stack_size);
+
+  assert(thread_control_block->allocated_memory_for_stack);
 
   memset(thread_control_block->allocated_memory_for_stack, 0, stack_size);
 
@@ -105,4 +107,9 @@ uint32_t thread_control_block_get_delay(const thread_control_block_t* thread_con
 void thread_control_block_set_delay(thread_control_block_t* thread_control_block, uint32_t delay)
 {
 	thread_control_block->delay = delay;
+}
+
+char* thread_control_block_get_thread_name(const thread_control_block_t* thread_control_block)
+{
+	return thread_control_block->thread_name;
 }

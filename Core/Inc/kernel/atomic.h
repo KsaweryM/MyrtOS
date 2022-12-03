@@ -54,7 +54,7 @@ void yield_after_critical_path();
   do                                \
   {                                 \
     __disable_irq();                \
-    VARIABLE++;                     \
+    VARIABLE--;                     \
     __enable_irq();                 \
   } while (0)
 

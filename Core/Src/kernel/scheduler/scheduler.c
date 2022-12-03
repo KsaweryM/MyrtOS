@@ -48,7 +48,12 @@ void scheduler_set_mutex_state(scheduler_t* scheduler)
 	scheduler->scheduler_set_mutex_state(scheduler);
 }
 
-void scheduler_launch (scheduler_t* scheduler)
+void scheduler_launch(scheduler_t* scheduler)
 {
 	scheduler->scheduler_launch(scheduler);
+}
+
+void scheduler_destroy_deactivated_threads(scheduler_t* scheduler)
+{
+	scheduler->scheduler_destroy_deactivated_threads(scheduler);
 }
