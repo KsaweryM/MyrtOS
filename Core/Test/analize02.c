@@ -11,8 +11,10 @@
 #include <kernel/measure_time.h>
 #include <string.h>
 
+volatile uint32_t analize2_total_max = 10000;
+volatile uint32_t analize2_total = 0;
 volatile uint32_t analize2_end = 0;
-const uint32_t analize2_sleep_time = 10;
+const uint32_t analize2_sleep_time = 1000;
 volatile uint32_t analize2_nr_high_priority_threads = 0;
 volatile uint32_t analize2_nr_finished_high_priority_threads = 0;
 
@@ -24,8 +26,9 @@ void analize2_high_priority_thread(void* args)
 {
 	volatile uint32_t* my_counter = ((uint32_t*) args);
 
-	while (!analize2_end)
+	while (analize2_total < analize2_total_max)
 	{
+		analize2_total++;
 		(*my_counter)++;
 		delay(analize2_sleep_time);
 	}
@@ -37,18 +40,14 @@ void analize2_low_priority_thread(void* args)
 {
 	volatile uint32_t* my_counter = ((uint32_t*) args);
 
-	while (!analize2_end)
+	while (analize2_total < analize2_total_max)
 	{
+		analize2_total++;
 		(*my_counter)++;
 		yield();
 	}
 }
 
-void end(void* args)
-{
-	delay(5 * 1000);
-	analize2_end = 1;
-}
 
 void wait_for_rest_threads(void* args)
 {
@@ -60,9 +59,15 @@ void wait_for_rest_threads(void* args)
 
 void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
-	uint32_t nr_threads = 10;
 
-	uint32_t nr_high_threads = 6;
+	uint32_t nr_threads = 50;
+	for (uint32_t ii = 0; ii <= 49; ii += 5)
+	{
+		analize2_total = 0;
+		analize2_nr_finished_high_priority_threads = 0;
+
+
+	uint32_t nr_high_threads = ii;
 
 		printf("nr_high_threads = %ld\r\n", nr_high_threads);
 
@@ -92,7 +97,7 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 		{
 			high_threads[i].function = analize2_high_priority_thread;
 			high_threads[i].function_arguments = (void*) &high_counters[i];
-			high_threads[i].stack_size = 1000;
+			high_threads[i].stack_size = 200;
 			high_threads[i].thread_priority = 14;
 			high_threads[i].thread_name = "high thread";
 
@@ -103,20 +108,13 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 		{
 			low_threads[i].function = analize2_low_priority_thread;
 			low_threads[i].function_arguments = (void*) &low_counters[i];
-			low_threads[i].stack_size = 1000;
+			low_threads[i].stack_size = 200;
 			low_threads[i].thread_priority = 13;
 			low_threads[i].thread_name = "low thread";
 
 			kernel_add_thread(kernel, &low_threads[i]);
 		}
 
-		thread_attributes_t thread_end = {
-				.function = end,
-				.function_arguments = 0,
-				.stack_size = 500,
-				.thread_priority = 15,
-				.thread_name = "end thread"
-		};
 
 		thread_attributes_t thread_wait = {
 				.function = wait_for_rest_threads,
@@ -126,9 +124,10 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 				.thread_name = "wait thread"
 		};
 
-		kernel_add_thread(kernel, &thread_end);
 		kernel_add_thread(kernel, &thread_wait);
 
+
+		//measure_start();
 		kernel_launch(kernel);
 
 		printf("high priority threads:\r\n");
@@ -163,7 +162,7 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 		free(low_counters);
 		free(high_threads);
 		free(low_threads);
-
+	}
 	/*
 	printf("\r\nmeasure;time;algorithm\r\n");
 
