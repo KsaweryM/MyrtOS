@@ -14,7 +14,7 @@
 volatile uint32_t analize2_total_max = 10000;
 volatile uint32_t analize2_total = 0;
 volatile uint32_t analize2_end = 0;
-const uint32_t analize2_sleep_time = 1000;
+const uint32_t analize2_sleep_time = 1;
 volatile uint32_t analize2_nr_high_priority_threads = 0;
 volatile uint32_t analize2_nr_finished_high_priority_threads = 0;
 
@@ -61,15 +61,27 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 {
 
 	uint32_t nr_threads = 50;
-	for (uint32_t ii = 0; ii <= 49; ii += 5)
+	uint32_t increment = 1;
+	for (uint32_t ii = 0; ii <= 49; ii += increment)
 	{
+		uint32_t total_total_high_priority = 0;
+		uint32_t total_total_low_priority = 0;
+
+		uint32_t nr_high_threads = ii;
+
+		//printf("nr_high_threads = %ld\r\n", nr_high_threads);
+
+		//printf("times: ");
+		for (uint32_t jj = 0; jj < 20; jj++)
+		{
+		//printf("%ld \r\n", jj);
 		analize2_total = 0;
 		analize2_nr_finished_high_priority_threads = 0;
 
 
-	uint32_t nr_high_threads = ii;
 
-		printf("nr_high_threads = %ld\r\n", nr_high_threads);
+
+
 
 		analize2_nr_finished_high_priority_threads = 0;
 		analize2_end = 0;
@@ -130,31 +142,33 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 		//measure_start();
 		kernel_launch(kernel);
 
-		printf("high priority threads:\r\n");
+	//	printf("high priority threads:\r\n");
 		uint32_t total_high_priority = 0;
 
 		for (uint32_t i = 0; i < nr_high_threads; i++)
 		{
-			printf("%ld;", high_counters[i]);
+			//printf("%ld;", high_counters[i]);
 
 			total_high_priority += high_counters[i];
 		}
 
-		printf("\r\n");
-
 
 		uint32_t total_low_priority = 0;
 
-		printf("low priority threads:\r\n");
+		//printf("low priority threads:\r\n");
 		for (uint32_t i = 0; i < nr_low_threads; i++)
 		{
-			printf("%ld;", low_counters[i]);
+			//printf("%ld;", low_counters[i]);
 			total_low_priority += low_counters[i];
 		}
 
-		printf("\r\n");
+		total_total_high_priority += total_high_priority;
+		total_total_low_priority += total_low_priority;
 
-		printf("total_high_priority = %ld, total_low_priority = %ld\r\n", total_high_priority, total_low_priority);
+
+		//printf("\r\n");
+
+		//printf("total_high_priority = %ld, total_low_priority = %ld\r\n", total_high_priority, total_low_priority);
 
 		kernel_destroy(kernel);
 
@@ -162,6 +176,10 @@ void analize02(SCHEDULER_ALGORITHM scheduler_algorithm)
 		free(low_counters);
 		free(high_threads);
 		free(low_threads);
+		}
+
+
+		printf("%ld;=%ld/%ld\r\n", ii, total_total_high_priority, total_total_low_priority);
 	}
 	/*
 	printf("\r\nmeasure;time;algorithm\r\n");

@@ -223,7 +223,7 @@ void TIM2_IRQHandler(void)
 
   if (list_is_empty(blocker_g->blocked_threads))
   {
-  	printf("Blocker list is empty!\n");
+  	//printf("Blocker list is empty!\n");
   }
 
   //iterator_reset(blocker_g->blocked_threads_iterator);
